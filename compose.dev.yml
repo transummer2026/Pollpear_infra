@@ -1,0 +1,49 @@
+services:
+  gateway:
+    build:
+      target: dev
+    volumes:
+      - ./../Pollpear_gateway:/app
+  backend:
+    build:
+      target: dev
+    volumes:
+      - ./../Pollpear_backend:/app
+  frontend:
+    build:
+      target: dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./../Pollpear_frontend:/app
+  ai:
+    build:
+      target: dev
+    volumes:
+      - ./../Pollpear_AI:/app
+  
+  prometheus:
+    build:
+      target: dev
+    ports:
+      - "9090:9090"
+  grafana:
+    build:
+      target: dev  
+    ports:
+      - "3000:3000"
+  vault:
+    build:
+      target: dev
+    ports:
+      - "8200:8200"
+  postgres:
+    build:
+      target: dev
+    ports:
+      - "5432:5432"
+  redis:
+    build:
+      target: dev
+    ports:
+      - "6379:6379"

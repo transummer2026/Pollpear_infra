@@ -1,0 +1,186 @@
+services:
+  gateway:
+    build:
+      context: ./../Pollpear_gateway
+      dockerfile: Dockerfile
+    container_name: pollpear-gateway
+    depends_on:
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+      backend:
+         condition: service_started # TODO: a mettre a healthy plus tard
+      frontend:
+        condition: service_started # TODO: a mettre a healthy plus tard
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+    networks:
+      - gateway-network
+
+  backend:
+    build:
+      context: ./../Pollpear_backend
+      dockerfile: Dockerfile
+    container_name: pollpear-backend
+    depends_on:
+      vault:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+    networks:
+        - backend-network
+        - gateway-network
+        - vault-network
+
+  frontend:
+    build:
+      context: ./../Pollpear_frontend
+      dockerfile: Dockerfile
+    container_name: pollpear-frontend
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.ts"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+    networks:
+      - gateway-network
+
+  ai:
+    build:
+      context: ./../Pollpear_AI
+      dockerfile: Dockerfile
+    container_name: pollpear-ai
+    # TODO: a implementer une fois que endpoint up
+    # healthcheck:
+    #   test: ["CMD", "curl -f", "http://localhost:3002/health"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    restart: on-failure
+    networks:
+      - backend-network
+      - vault-network
+
+  prometheus:
+    image: ghcr.io/transummer2026/prometheus@sha256:ac27885f2f38124a9c22d7e758ce159e363032608b7cea56d79d9485a34fc9e9
+    container_name: pollpear-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+  
+  grafana:
+    image: ghcr.io/transummer2026/grafana@sha256:0ed3b029f600a41a16e821643bb947a0d9df8d1e6024cc33ad61c3b261b560f0
+    container_name: pollpear-grafana
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  vault:
+    image: ghcr.io/transummer2026/vault@sha256:78f1c39d7bf50bf3c91cd5678b3d77ef6f02ba5381f4291556caf8f0789562d4
+    container_name: pollpear-vault
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vault-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: pollpear-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pollpear}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pollpear}
+      POSTGRES_DB: ${POSTGRES_DB:-pollpear}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pollpear} -d ${POSTGRES_DB:-pollpear}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    depends_on:
+      vault:
+        condition: service_healthy
+    networks:
+      - backend-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: pollpear-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+      - ./redis:/redis-init:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      vault:
+        condition: service_healthy
+    networks:
+      - backend-network
+      - gateway-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+
+networks:
+  gateway-network:
+    driver: bridge
+    name: gateway-network
+  vault-network:
+    driver: bridge
+    name: vault-network
+  backend-network:
+    driver: bridge
+    name: backend-network
+  monitoring-network:
+    driver: bridge
+    name: monitoring-network
+  
+# TODO: acces a vault direct ou via gateway?
