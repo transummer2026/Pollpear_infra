@@ -27,6 +27,7 @@ jobs:
       lint_cmd: echo "no lint"
       test_cmd: echo "no tests"
       build_cmd: echo "no build"
+      skip_build: true
       coverage_threshold: 0
     secrets:
       OTEL_ENDPOINT: ${{ secrets.OTEL_ENDPOINT }}
