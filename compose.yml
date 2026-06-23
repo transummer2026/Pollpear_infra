@@ -1,5 +1,6 @@
 services:
   gateway:
+    profiles: [prod]
     build:
       context: ./../Pollpear_gateway
       dockerfile: Dockerfile
@@ -23,6 +24,7 @@ services:
       - gateway-network
 
   backend:
+    profiles: [prod]
     build:
       context: ./../Pollpear_backend
       dockerfile: Dockerfile
@@ -46,6 +48,7 @@ services:
         - vault-network
 
   frontend:
+    profiles: [prod]
     build:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
@@ -60,6 +63,7 @@ services:
       - gateway-network
 
   ai:
+    profiles: [prod]
     build:
       context: ./../Pollpear_AI
       dockerfile: Dockerfile
@@ -80,8 +84,6 @@ services:
     container_name: pollpear-prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports:
-      - "9090:9090"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9090/-/ready"]
       interval: 10s
@@ -94,8 +96,6 @@ services:
   grafana:
     image: ghcr.io/transummer2026/grafana@sha256:0ed3b029f600a41a16e821643bb947a0d9df8d1e6024cc33ad61c3b261b560f0
     container_name: pollpear-grafana
-    ports:
-      - "3000:3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 10s
@@ -110,8 +110,6 @@ services:
     container_name: pollpear-vault
     environment:
       VAULT_ADDR: http://127.0.0.1:8200
-    ports:
-      - "8200:8200"
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 10s
