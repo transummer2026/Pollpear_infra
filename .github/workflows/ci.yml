@@ -35,3 +35,4 @@ jobs:
       DISCORD_WEBHOOK_REPO: ${{ secrets.DISCORD_WEBHOOK_INFRA }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+      SEMANTIC_TOKEN: ${{ secrets.SEMANTIC_TOKEN }}
