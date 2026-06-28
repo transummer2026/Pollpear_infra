@@ -1,0 +1,24 @@
+# Rhttps://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: pollpear
+    environment: dev
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: prometheus
+
+  - job_name: grafana
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["grafana:3000"]
+        labels:
+          service: grafana
+

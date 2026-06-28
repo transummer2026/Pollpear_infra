@@ -22,6 +22,7 @@ services:
     restart: on-failure
     networks:
       - gateway-network
+      - vault-network
 
   backend:
     profiles: [prod]
@@ -68,6 +69,9 @@ services:
       context: ./../Pollpear_AI
       dockerfile: Dockerfile
     container_name: pollpear-ai
+    depends_on:
+      vault:
+        condition: service_healthy
     # TODO: a implementer une fois que endpoint up
     # healthcheck:
     #   test: ["CMD", "curl -f", "http://localhost:3002/health"]
@@ -136,9 +140,6 @@ services:
       retries: 5
       start_period: 10s
     restart: unless-stopped
-    depends_on:
-      vault:
-        condition: service_healthy
     networks:
       - backend-network
 
@@ -155,9 +156,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    depends_on:
-      vault:
-        condition: service_healthy
     networks:
       - backend-network
       - gateway-network
