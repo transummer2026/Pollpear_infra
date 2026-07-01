@@ -22,6 +22,7 @@ services:
     restart: on-failure
     networks:
       - gateway-network
+      - vault-network
 
   backend:
     profiles: [prod]
@@ -68,6 +69,9 @@ services:
       context: ./../Pollpear_AI
       dockerfile: Dockerfile
     container_name: pollpear-ai
+    depends_on:
+      vault:
+        condition: service_healthy
     # TODO: a implementer une fois que endpoint up
     # healthcheck:
     #   test: ["CMD", "curl -f", "http://localhost:3002/health"]
@@ -80,7 +84,7 @@ services:
       - vault-network
 
   prometheus:
-    image: ghcr.io/transummer2026/prometheus@sha256:ac27885f2f38124a9c22d7e758ce159e363032608b7cea56d79d9485a34fc9e9
+    image: ghcr.io/transummer2026/prometheus@sha256:a75c5a35bc21d7afe69551eefa3cb1e1fb1775fe759408007a66b54ec3de1f29
     container_name: pollpear-prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -94,7 +98,7 @@ services:
       - monitoring-network
   
   grafana:
-    image: ghcr.io/transummer2026/grafana@sha256:0ed3b029f600a41a16e821643bb947a0d9df8d1e6024cc33ad61c3b261b560f0
+    image: ghcr.io/transummer2026/grafana@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
     container_name: pollpear-grafana
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
@@ -106,7 +110,7 @@ services:
       - monitoring-network
 
   vault:
-    image: ghcr.io/transummer2026/vault@sha256:78f1c39d7bf50bf3c91cd5678b3d77ef6f02ba5381f4291556caf8f0789562d4
+    image: ghcr.io/transummer2026/vault@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54
     container_name: pollpear-vault
     environment:
       VAULT_ADDR: http://127.0.0.1:8200
@@ -136,9 +140,6 @@ services:
       retries: 5
       start_period: 10s
     restart: unless-stopped
-    depends_on:
-      vault:
-        condition: service_healthy
     networks:
       - backend-network
 
@@ -155,9 +156,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    depends_on:
-      vault:
-        condition: service_healthy
     networks:
       - backend-network
       - gateway-network

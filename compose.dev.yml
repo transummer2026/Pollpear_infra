@@ -6,11 +6,29 @@ services:
     ports:
       - "6379:6379"
   vault:
+    build:
+      context: ./../Pollpear_cyber
+      dockerfile: Dockerfile
+    image: pollpear-vault:dev
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-root}
     ports:
       - "8200:8200"
+    volumes:
+      - vault-logs:/vault/logs
+    post_start:
+      - command:
+          - /bin/sh
+          - -c
+          - until vault status >/dev/null 2>&1; do sleep 1; done; vault audit list 2>/dev/null | grep -q 'file/' || vault audit enable file file_path=/vault/logs/audit.log
+        environment:
+          VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-root}
   prometheus:
     ports:
       - "9090:9090"
   grafana:
     ports:
       - "3000:3000"
+
+volumes:
+  vault-logs:
