@@ -95,3 +95,8 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
+
+# secrets
+.env
+.env.*
+!.env.example
