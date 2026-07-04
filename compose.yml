@@ -86,8 +86,15 @@ services:
   prometheus:
     image: ghcr.io/transummer2026/prometheus@sha256:a75c5a35bc21d7afe69551eefa3cb1e1fb1775fe759408007a66b54ec3de1f29
     container_name: pollpear-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=d
+      - --storage.tsdb.retention.size=5GB
+      - --web.enable-lifecycle
+      #- --log.level=debug
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9090/-/ready"]
       interval: 10s
@@ -100,6 +107,10 @@ services:
   grafana:
     image: ghcr.io/transummer2026/grafana@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
     container_name: pollpear-grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 10s
