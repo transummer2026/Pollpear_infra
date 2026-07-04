@@ -1,5 +1,6 @@
 services:
 
+# SERVICES POLLPEAR
   gateway:
     profiles: [prod]
     build:
@@ -82,7 +83,7 @@ services:
     networks:
       - backend-network
 
-
+# Services infra
   vault:
     image: ghcr.io/transummer2026/vault@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54
     container_name: pollpear-vault
@@ -156,6 +157,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
+      - core-network
+      - backend-network
       - monitoring-network
   
   grafana:
@@ -177,6 +180,7 @@ services:
     networks:
       - monitoring-network
 
+# Exporters
   node-exporter:
     image: ghcr.io/transummer2026/node-exporter@sha256:e9cff4fc67b1818f8c97adb115b9f12c9a54b533de86765d4a0effc01b357205
     container_name: pollpear-node-exporter
