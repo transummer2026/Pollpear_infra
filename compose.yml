@@ -85,7 +85,7 @@ services:
 
 # Services infra
   vault:
-    image: ghcr.io/transummer2026/vault@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54
+    image: ghcr.io/transummer2026/vault:latest
     container_name: pollpear-vault
     environment:
       VAULT_ADDR: http://127.0.0.1:8200
@@ -101,7 +101,7 @@ services:
       - monitoring-network
 
   postgres:
-    image: postgres:16-alpine
+    image: ghcr.io/transummer2026/postgres:16-alpine
     container_name: pollpear-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-pollpear}
@@ -123,7 +123,7 @@ services:
       - monitoring-network
 
   redis:
-    image: redis:7-alpine
+    image: ghcr.io/transummer2026/redis:7-alpine
     container_name: pollpear-redis
     command: redis-server --appendonly yes
     volumes:
@@ -139,7 +139,7 @@ services:
       - backend-network
 
   prometheus:
-    image: ghcr.io/transummer2026/prometheus@sha256:a75c5a35bc21d7afe69551eefa3cb1e1fb1775fe759408007a66b54ec3de1f29
+    image: ghcr.io/transummer2026/prometheus:latest
     container_name: pollpear-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -162,7 +162,7 @@ services:
       - monitoring-network
   
   grafana:
-    image: ghcr.io/transummer2026/grafana@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
+    image: ghcr.io/transummer2026/grafana:latest
     container_name: pollpear-grafana
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -183,7 +183,7 @@ services:
 
 # Exporters
   node-exporter:
-    image: ghcr.io/transummer2026/node-exporter@sha256:e9cff4fc67b1818f8c97adb115b9f12c9a54b533de86765d4a0effc01b357205
+    image: ghcr.io/transummer2026/node-exporter:latest
     container_name: pollpear-node-exporter
     command:
       - --path.rootfs=/host
@@ -195,7 +195,7 @@ services:
       - monitoring-network
 
   postgres-exporter:
-    image: ghcr.io/transummer2026/postgres-exporter@sha256:215b8299a47328078dabb751d2ffc1fd9a0aad3aa8c7daed36c567d2bd83a8a1
+    image: ghcr.io/transummer2026/postgres-exporter:latest
     container_name: pollpear-postgres-exporter
     environment:
       DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-pollpear}:${POSTGRES_PASSWORD:-pollpear}@postgres:5432/${POSTGRES_DB:-pollpear}?sslmode=disable
@@ -208,7 +208,7 @@ services:
       - monitoring-network
 
   redis-exporter:
-    image: ghcr.io/transummer2026/redis-exporter@sha256:2e9795be900db073e9475fdb9c5124db309b07a3e4e75a1770705cb03be1a1c8
+    image: ghcr.io/transummer2026/redis-exporter:latest
     container_name: pollpear-redis-exporter
     environment:
       REDIS_ADDR: redis://redis:6379
