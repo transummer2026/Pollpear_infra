@@ -22,8 +22,8 @@ services:
       retries: 5
     restart: on-failure
     networks:
-      - gateway-network
-      - vault-network
+      - core-network
+      - backend-network
 
   backend:
     profiles: [prod]
@@ -45,9 +45,8 @@ services:
       retries: 5
     restart: on-failure
     networks:
+        - core-network
         - backend-network
-        - gateway-network
-        - vault-network
 
   frontend:
     profiles: [prod]
@@ -62,7 +61,7 @@ services:
       retries: 5
     restart: on-failure
     networks:
-      - gateway-network
+      - core-network
 
   ai:
     profiles: [prod]
@@ -82,7 +81,6 @@ services:
     restart: on-failure
     networks:
       - backend-network
-      - vault-network
 
 
   vault:
@@ -97,7 +95,9 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - vault-network
+      - core-network
+      - backend-network
+      - monitoring-network
 
   postgres:
     image: postgres:16-alpine
@@ -117,7 +117,9 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
+      - core-network
       - backend-network
+      - monitoring-network
 
   redis:
     image: redis:7-alpine
@@ -134,7 +136,6 @@ services:
     restart: unless-stopped
     networks:
       - backend-network
-      - gateway-network
 
   prometheus:
     image: ghcr.io/transummer2026/prometheus@sha256:a75c5a35bc21d7afe69551eefa3cb1e1fb1775fe759408007a66b54ec3de1f29
@@ -221,12 +222,9 @@ volumes:
   grafana-data:
   
 networks:
-  gateway-network:
+  core-network:
     driver: bridge
-    name: gateway-network
-  vault-network:
-    driver: bridge
-    name: vault-network
+    name: core-network
   backend-network:
     driver: bridge
     name: backend-network
