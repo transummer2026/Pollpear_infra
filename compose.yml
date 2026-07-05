@@ -110,10 +110,10 @@ services:
       - monitoring-network
 
   vault:
-    image: ghcr.io/transummer2026/vault@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54
+    build:
+      context: ./../Pollpear_cyber
+      dockerfile: Dockerfile
     container_name: pollpear-vault
-    environment:
-      VAULT_ADDR: http://127.0.0.1:8200
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 10s
@@ -121,7 +121,9 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - vault-network
+      - core-network
+      - backend-network
+      - monitoring-network
 
   postgres:
     image: postgres:16-alpine
