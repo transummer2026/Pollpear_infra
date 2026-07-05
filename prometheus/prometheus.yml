@@ -8,12 +8,27 @@ global:
     cluster: pollpear
     environment: dev
 
+rule_files:
+  - alert-rules.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
         labels:
           service: prometheus
+
+  - job_name: alertmanager
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["alertmanager:9093"]
+        labels:
+          service: alertmanager
 
   - job_name: grafana
     metrics_path: /metrics
@@ -51,6 +66,13 @@ scrape_configs:
       - targets: ["node-exporter:9100"]
         labels:
           service: node
+
+  - job_name: cadvisor
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          service: cadvisor
 
   - job_name: backend
     metrics_path: /metrics
