@@ -29,6 +29,9 @@ services:
   grafana:
     ports:
       - "9091:3000"
+  alertmanager:
+    ports:
+      - "9093:9093"
 
 volumes:
   vault-logs:

@@ -99,9 +99,6 @@ services:
       - core-network
       - backend-network
       - monitoring-network
-      - core-network
-      - backend-network
-      - monitoring-network
 
   postgres:
     image: ghcr.io/transummer2026/postgres:16-alpine
@@ -152,6 +149,7 @@ services:
       #- --log.level=debug
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus-data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
@@ -177,6 +175,24 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  alertmanager:
+    image: ghcr.io/transummer2026/alertmanager:latest
+    container_name: pollpear-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager:/etc/alertmanager:ro
+      - alertmanager-data:/alertmanager
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/ready"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -210,6 +226,23 @@ services:
       - backend-network
       - monitoring-network
 
+  cadvisor:
+    image: ghcr.io/transummer2026/cadvisor:latest
+    container_name: pollpear-cadvisor
+    command:
+      - --docker_only=true
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
   redis-exporter:
     image: ghcr.io/transummer2026/redis-exporter:latest
     container_name: pollpear-redis-exporter
@@ -228,6 +261,7 @@ volumes:
   redis-data:
   prometheus-data:
   grafana-data:
+  alertmanager-data:
   
 networks:
   core-network:
