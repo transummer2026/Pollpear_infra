@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: pollpear
+    folder: Pollpear
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    disableDeletion: true

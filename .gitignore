@@ -100,3 +100,4 @@ tags
 .env
 .env.*
 !.env.example
+alertmanager/secrets/discord_webhook

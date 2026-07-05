@@ -1,0 +1,73 @@
+# Doc: https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
+
+groups:
+  - name: disponibilite
+    rules:
+      - alert: ServiceDown
+        expr: up{job!~"backend|frontend|gateway|ai"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} est down"
+          description: "La target {{ $labels.instance }} (job {{ $labels.job }}) ne répond plus au scrape depuis 2 minutes."
+
+      - alert: VaultSealed
+        expr: max(vault_core_unsealed) == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vault est SEALED"
+          description: "Vault répond mais est scellé : aucun service ne peut récupérer ses secrets. Désceller au plus vite."
+
+  - name: machine-hote
+    rules:
+      - alert: HostDiskAlmostFull
+        expr: 100 * (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Disque presque plein ({{ $value | printf "%.0f" }}%)'
+          description: "Le disque racine dépasse 85% d'utilisation. Prometheus, Postgres et les logs vont finir par échouer en écriture."
+
+      - alert: HostHighMemory
+        expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAM > 90% depuis 10 min"
+          description: "Mémoire hôte saturée. Voir la row Conteneurs du dashboard overview pour identifier le consommateur."
+
+      - alert: HostHighCPU
+        expr: 100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU > 90% depuis 10 min"
+          description: "CPU hôte saturé de façon soutenue — latence en vue sur tous les services."
+
+  - name: bases-de-donnees
+    rules:
+      - alert: PostgresConnexionsHigh
+        expr: sum(pg_stat_activity_count) / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Connexions Postgres > 80% du max"
+          description: '{{ $value | printf "%.0f" }}% du pool utilisé. Vérifier les fuites de connexions côté backend avant saturation.'
+
+  - name: monitoring
+    rules:
+      - alert: TooManySeries
+        expr: prometheus_tsdb_head_series > 100000
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cardinalité anormale ({{ $value }} séries)"
+          description: "Le nombre de séries TSDB a explosé — un label non borné (ID, path brut...) a probablement été introduit. Voir Norme-metrics §4."

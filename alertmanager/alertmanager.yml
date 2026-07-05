@@ -1,0 +1,19 @@
+# Doc: https://prometheus.io/docs/alerting/latest/configuration/
+
+route:
+  receiver: discord
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: discord
+    discord_configs:
+      - webhook_url_file: /etc/alertmanager/secrets/discord_webhook
+        title: "[{{ .Status | toUpper }}] {{ .CommonAnnotations.summary }}"
+
+inhibit_rules:
+  - source_matchers: [severity="critical"]
+    target_matchers: [severity="warning"]
+    equal: [job]

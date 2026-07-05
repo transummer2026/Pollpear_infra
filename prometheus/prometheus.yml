@@ -8,12 +8,27 @@ global:
     cluster: pollpear
     environment: dev
 
+rule_files:
+  - alert-rules.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
         labels:
           service: prometheus
+
+  - job_name: alertmanager
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["alertmanager:9093"]
+        labels:
+          service: alertmanager
 
   - job_name: grafana
     metrics_path: /metrics
@@ -22,3 +37,69 @@ scrape_configs:
         labels:
           service: grafana
 
+  - job_name: vault
+    metrics_path: /v1/sys/metrics
+    params:
+      format: [prometheus]
+    static_configs:
+      - targets: ["vault:8200"]
+        labels:
+          service: vault
+
+  - job_name: redis
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+        labels:
+          service: redis
+
+  - job_name: postgres
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          service: postgres
+
+  - job_name: node
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: node
+
+  - job_name: cadvisor
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          service: cadvisor
+
+  - job_name: backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:3000"]
+        labels:
+          service: backend
+
+  # TODO: a modifier quand on saura quel port il aura en prod
+  - job_name: frontend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["frontend:5173"]
+        labels:
+          service: frontend
+
+  # TODO: a modifier quand on saura quel port il aura en prod
+  - job_name: gateway
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["gateway:8080"]
+        labels:
+          service: gateway
+
+  - job_name: ai
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["ai:3002"]
+        labels:
+          service: ai

@@ -1,4 +1,6 @@
 services:
+
+# SERVICES POLLPEAR
   gateway:
     profiles: [prod]
     build:
@@ -21,8 +23,8 @@ services:
       retries: 5
     restart: on-failure
     networks:
-      - gateway-network
-      - vault-network
+      - core-network
+      - backend-network
 
   backend:
     profiles: [prod]
@@ -44,9 +46,8 @@ services:
       retries: 5
     restart: on-failure
     networks:
+        - core-network
         - backend-network
-        - gateway-network
-        - vault-network
 
   frontend:
     profiles: [prod]
@@ -61,7 +62,7 @@ services:
       retries: 5
     restart: on-failure
     networks:
-      - gateway-network
+      - core-network
 
   ai:
     profiles: [prod]
@@ -81,39 +82,13 @@ services:
     restart: on-failure
     networks:
       - backend-network
-      - vault-network
 
-  prometheus:
-    image: ghcr.io/transummer2026/prometheus@sha256:a75c5a35bc21d7afe69551eefa3cb1e1fb1775fe759408007a66b54ec3de1f29
-    container_name: pollpear-prometheus
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9090/-/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - monitoring-network
-  
-  grafana:
-    image: ghcr.io/transummer2026/grafana@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
-    container_name: pollpear-grafana
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - monitoring-network
-
+# Services infra
   vault:
-    image: ghcr.io/transummer2026/vault@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54
+    build:
+      context: ./../Pollpear_cyber
+      dockerfile: Dockerfile
     container_name: pollpear-vault
-    environment:
-      VAULT_ADDR: http://127.0.0.1:8200
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 10s
@@ -121,10 +96,12 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - vault-network
+      - core-network
+      - backend-network
+      - monitoring-network
 
   postgres:
-    image: postgres:16-alpine
+    image: ghcr.io/transummer2026/postgres:16-alpine
     container_name: pollpear-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-pollpear}
@@ -141,10 +118,12 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
+      - core-network
       - backend-network
+      - monitoring-network
 
   redis:
-    image: redis:7-alpine
+    image: ghcr.io/transummer2026/redis:7-alpine
     container_name: pollpear-redis
     command: redis-server --appendonly yes
     volumes:
@@ -158,20 +137,136 @@ services:
     restart: unless-stopped
     networks:
       - backend-network
-      - gateway-network
+
+  prometheus:
+    image: ghcr.io/transummer2026/prometheus:latest
+    container_name: pollpear-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=5GB
+      - --web.enable-lifecycle
+      #- --log.level=debug
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - core-network
+      - backend-network
+      - monitoring-network
+  
+  grafana:
+    image: ghcr.io/transummer2026/grafana:latest
+    container_name: pollpear-grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:?GRAFANA_USER is not set in .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is not set in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  alertmanager:
+    image: ghcr.io/transummer2026/alertmanager:latest
+    container_name: pollpear-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager:/etc/alertmanager:ro
+      - alertmanager-data:/alertmanager
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+# Exporters
+  node-exporter:
+    image: ghcr.io/transummer2026/node-exporter:latest
+    container_name: pollpear-node-exporter
+    command:
+      - --path.rootfs=/host
+    pid: host
+    volumes:
+      - /:/host:ro
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  postgres-exporter:
+    image: ghcr.io/transummer2026/postgres-exporter:latest
+    container_name: pollpear-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-pollpear}:${POSTGRES_PASSWORD:-pollpear}@postgres:5432/${POSTGRES_DB:-pollpear}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend-network
+      - monitoring-network
+
+  cadvisor:
+    image: ghcr.io/transummer2026/cadvisor:latest
+    container_name: pollpear-cadvisor
+    command:
+      - --docker_only=true
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  redis-exporter:
+    image: ghcr.io/transummer2026/redis-exporter:latest
+    container_name: pollpear-redis-exporter
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend-network
+      - monitoring-network
 
 volumes:
   postgres-data:
   redis-data:
   prometheus-data:
-
+  grafana-data:
+  alertmanager-data:
+  
 networks:
-  gateway-network:
+  core-network:
     driver: bridge
-    name: gateway-network
-  vault-network:
-    driver: bridge
-    name: vault-network
+    name: core-network
   backend-network:
     driver: bridge
     name: backend-network
