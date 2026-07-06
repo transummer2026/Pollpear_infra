@@ -31,6 +31,13 @@ services:
     build:
       context: ./../Pollpear_backend
       dockerfile: Dockerfile
+    develop:
+      watch:
+        - action: rebuild
+          path: ./../Pollpear_backend/package.json
+        - action: sync
+          path: ./../Pollpear_backend/src
+          target: /app/src
     container_name: pollpear-backend
     depends_on:
       vault:
@@ -54,6 +61,13 @@ services:
     build:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
+    develop:
+      watch:
+        - action: rebuild
+          path: ./../Pollpear_frontend/package.json
+        - action: sync
+          path: ./../Pollpear_frontend/src
+          target: /app/src
     container_name: pollpear-frontend
     healthcheck:
       test: ["CMD", "node", "healthcheck.ts"]

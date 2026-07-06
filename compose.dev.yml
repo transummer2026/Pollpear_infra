@@ -1,4 +1,14 @@
 services:
+  backend:
+    build:
+      target: dev
+    ports:
+      - "3000:3000"
+  frontend:
+    build:
+      target: dev
+    ports:
+      - "5173:5173"
   postgres:
     ports:
       - "5432:5432"
