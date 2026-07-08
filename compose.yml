@@ -1,8 +1,6 @@
 services:
-
-# SERVICES POLLPEAR
+  # SERVICES POLLPEAR
   gateway:
-    profiles: [prod]
     build:
       context: ./../Pollpear_gateway
       dockerfile: Dockerfile
@@ -13,7 +11,7 @@ services:
       vault:
         condition: service_healthy
       backend:
-         condition: service_started # TODO: a mettre a healthy plus tard
+        condition: service_started # TODO: a mettre a healthy plus tard
       frontend:
         condition: service_started # TODO: a mettre a healthy plus tard
     healthcheck:
@@ -27,7 +25,6 @@ services:
       - backend-network
 
   backend:
-    profiles: [prod]
     build:
       context: ./../Pollpear_backend
       dockerfile: Dockerfile
@@ -53,11 +50,10 @@ services:
       retries: 5
     restart: on-failure
     networks:
-        - core-network
-        - backend-network
+      - core-network
+      - backend-network
 
   frontend:
-    profiles: [prod]
     build:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
@@ -79,7 +75,6 @@ services:
       - core-network
 
   ai:
-    profiles: [prod]
     build:
       context: ./../Pollpear_AI
       dockerfile: Dockerfile
@@ -97,7 +92,7 @@ services:
     networks:
       - backend-network
 
-# Services infra
+  # Services infra
   vault:
     build:
       context: ./../Pollpear_cyber
@@ -125,7 +120,11 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pollpear} -d ${POSTGRES_DB:-pollpear}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-pollpear} -d ${POSTGRES_DB:-pollpear}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -175,7 +174,7 @@ services:
       - core-network
       - backend-network
       - monitoring-network
-  
+
   grafana:
     image: ghcr.io/transummer2026/grafana:latest
     container_name: pollpear-grafana
@@ -214,7 +213,7 @@ services:
     networks:
       - monitoring-network
 
-# Exporters
+  # Exporters
   node-exporter:
     image: ghcr.io/transummer2026/node-exporter:latest
     container_name: pollpear-node-exporter
@@ -276,7 +275,7 @@ volumes:
   prometheus-data:
   grafana-data:
   alertmanager-data:
-  
+
 networks:
   core-network:
     driver: bridge
@@ -287,5 +286,6 @@ networks:
   monitoring-network:
     driver: bridge
     name: monitoring-network
-  
+
 # TODO: acces a vault direct ou via gateway?
+
