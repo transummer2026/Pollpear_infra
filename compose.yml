@@ -32,10 +32,14 @@ services:
       watch:
         - action: rebuild
           path: ./../Pollpear_backend/package.json
-        - action: sync
+        - action: sync+restart
           path: ./../Pollpear_backend/src
           target: /app/src
     container_name: pollpear-backend
+    environment:
+      POSTGRES_URL: ${POSTGRES_URL}
+      NESTJS_PEPPER: ${NESTJS_PEPPER}
+      FRONTEND_URL: ${FRONTEND_URL}
     depends_on:
       vault:
         condition: service_healthy
@@ -57,6 +61,8 @@ services:
     build:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
+    environment:
+      BACKEND_URL: ${BACKEND_URL}
     develop:
       watch:
         - action: rebuild
