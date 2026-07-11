@@ -1,4 +1,9 @@
 services:
+  gateway:
+    build:
+      target: dev
+    ports:
+      - "8080:8080"
   backend:
     build:
       target: dev
@@ -45,3 +50,4 @@ services:
 
 volumes:
   vault-logs:
+    name: pollpear-vault-logs
