@@ -1,0 +1,60 @@
+services:
+
+  nginx:
+    image: ghcr.io/transummer2026/nginx:alpine
+    container_name: pollpear-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      STAGING_DOMAIN: ${STAGING_DOMAIN:?STAGING_DOMAIN is not set in .env}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/htpasswd:/etc/nginx/htpasswd:ro
+      - ./nginx/99-cert-reload.sh:/docker-entrypoint.d/99-cert-reload.sh:ro
+      - ./nginx/srv:/srv:ro
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      frontend:
+        condition: service_started # TODO: gateway healthy quand la gateway sera codée
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - core-network
+      - monitoring-network
+
+  certbot:
+    image: ghcr.io/transummer2026/certbot:latest
+    container_name: pollpear-certbot
+    entrypoint: ["/bin/sh", "/renew-loop.sh"]
+    volumes:
+      - ./nginx/renew-loop.sh:/renew-loop.sh:ro
+      - certbot-certs:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    restart: unless-stopped
+
+  # TODO: retirer quand la gateway sera codée — exclue de staging en attendant
+  gateway:
+    profiles: ["disabled"]
+
+  # TODO: passer au target prod quand les Dockerfile
+    build:
+      target: dev
+
+  backend:
+    build:
+      target: dev
+
+  grafana:
+    environment:
+      GF_SERVER_ROOT_URL: https://${STAGING_DOMAIN}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+
+volumes:
+  certbot-certs:
+  certbot-webroot:
