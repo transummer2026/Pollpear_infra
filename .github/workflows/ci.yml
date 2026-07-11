@@ -10,14 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  trigger:
-    name: Trigger
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "CI infra déclenché"
-
   ci:
-    needs: trigger
     permissions:
       contents: read
       pull-requests: read
