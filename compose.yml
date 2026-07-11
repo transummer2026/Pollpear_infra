@@ -40,6 +40,7 @@ services:
       POSTGRES_URL: ${POSTGRES_URL}
       NESTJS_PEPPER: ${NESTJS_PEPPER}
       FRONTEND_URL: ${FRONTEND_URL}
+      REDIS_URL: ${REDIS_URL}
     depends_on:
       vault:
         condition: service_healthy
