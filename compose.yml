@@ -94,7 +94,7 @@ services:
 
   ai:
     build:
-      context: ./../Pollpear_AI
+      context: ./../Pollpear_ai
       dockerfile: Dockerfile
     container_name: pollpear-ai
     depends_on:

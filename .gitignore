@@ -100,4 +100,9 @@ tags
 .env
 .env.*
 !.env.example
+
+nginx/srv/*
+!nginx/srv/.gitkeep
+
+nginx/htpasswd
 alertmanager/secrets/discord_webhook
