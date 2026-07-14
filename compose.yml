@@ -13,9 +13,17 @@ services:
           target: /app/src
     container_name: pollpear-gateway
     environment:
-      FRONTEND_URL: ${FRONTEND_URL},
-      BACKEND_URL: ${BACKEND_URL},
-      REDIS_URL: ${REDIS_URL},
+      ADMIN_SERVICE_URL: ${BACKEND_URL}
+      AUTH_SERVICE_URL: ${BACKEND_URL}
+      CONTACT_SERVICE_URL: ${BACKEND_URL}
+      FEED_SERVICE_URL: ${BACKEND_URL}
+      ME_SERVICE_URL: ${BACKEND_URL}
+      POLLS_SERVICE_URL: ${BACKEND_URL}
+      ROOMS_SERVICE_URL: ${BACKEND_URL}
+      SEARCH_SERVICE_URL: ${BACKEND_URL}
+      USERS_SERVICE_URL: ${BACKEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      REDIS_URL: ${REDIS_URL}
     depends_on:
       vault:
         condition: service_healthy
