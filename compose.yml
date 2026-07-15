@@ -4,11 +4,30 @@ services:
     build:
       context: ./../Pollpear_gateway
       dockerfile: Dockerfile
+    develop:
+      watch:
+        - action: rebuild
+          path: ./../Pollpear_gateway/Cargo.toml
+        - action: sync+restart
+          path: ./../Pollpear_gateway/src
+          target: /app/src
     container_name: pollpear-gateway
+    environment:
+      ADMIN_SERVICE_URL: ${BACKEND_URL}
+      AUTH_SERVICE_URL: ${BACKEND_URL}
+      CONTACT_SERVICE_URL: ${BACKEND_URL}
+      FEED_SERVICE_URL: ${BACKEND_URL}
+      ME_SERVICE_URL: ${BACKEND_URL}
+      POLLS_SERVICE_URL: ${BACKEND_URL}
+      ROOMS_SERVICE_URL: ${BACKEND_URL}
+      SEARCH_SERVICE_URL: ${BACKEND_URL}
+      USERS_SERVICE_URL: ${BACKEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      REDIS_URL: ${REDIS_URL}
     depends_on:
-      redis:
-        condition: service_healthy
       vault:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       backend:
         condition: service_started # TODO: a mettre a healthy plus tard
@@ -40,6 +59,7 @@ services:
       POSTGRES_URL: ${POSTGRES_URL}
       NESTJS_PEPPER: ${NESTJS_PEPPER}
       FRONTEND_URL: ${FRONTEND_URL}
+      REDIS_URL: ${REDIS_URL}
     depends_on:
       vault:
         condition: service_healthy
@@ -277,10 +297,15 @@ services:
 
 volumes:
   postgres-data:
+    name: pollpear-postgres-data
   redis-data:
+    name: pollpear-redis-data
   prometheus-data:
+    name: pollpear-prometheus-data
   grafana-data:
+    name: pollpear-grafana-data
   alertmanager-data:
+    name: pollpear-alertmanager-data
 
 networks:
   core-network:

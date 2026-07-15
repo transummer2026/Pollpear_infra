@@ -1,4 +1,9 @@
 services:
+  gateway:
+    build:
+      target: dev
+    ports:
+      - "8080:8080"
   backend:
     build:
       target: dev
@@ -9,9 +14,32 @@ services:
       target: dev
     ports:
       - "5173:5173"
+  ai:
+    build:
+      target: dev
+    ports:
+      - "3002:3002"
   postgres:
     ports:
       - "5432:5432"
+  studio:
+    build:
+      context: ./../Pollpear_backend
+      dockerfile: Dockerfile
+      target: dev
+    image: pollpear-studio:dev
+    container_name: pollpear-studio
+    command: ["npx", "prisma", "studio", "--port", "5555", "--browser", "none"]
+    environment:
+      POSTGRES_URL: ${POSTGRES_URL}
+    ports:
+      - "5555:5555"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - backend-network
   redis:
     ports:
       - "6379:6379"
@@ -45,3 +73,4 @@ services:
 
 volumes:
   vault-logs:
+    name: pollpear-vault-logs
