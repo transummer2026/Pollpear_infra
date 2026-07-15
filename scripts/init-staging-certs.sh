@@ -10,7 +10,7 @@ compose() {
     -f Pollpear_infra/compose.yml \
     -f Pollpear_infra/compose.staging.yml "$@"
 }
-[[ -f .env ]] || { echo ".env forbidden in the super-repo"; exit 1; }
+[[ -f .env ]] || { echo "✗ .env missing at the super-repo root"; exit 1; }
 set -a
 source .env
 set +a
@@ -19,7 +19,7 @@ set +a
 : "${ACME_EMAIL:?ACME_EMAIL manquant dans .env}"
 
 if [[ ! -f Pollpear_infra/nginx/htpasswd ]]; then
-  echo "✗ Pollpear_infra/nginx/htpasswd forbidden generate her with:"
+  echo "✗ Pollpear_infra/nginx/htpasswd missing, generate it with:"
   echo "  docker run --rm httpd:2.4-alpine htpasswd -Bbn pollpear 'password' > Pollpear_infra/nginx/htpasswd"
   exit 1
 fi
@@ -33,7 +33,7 @@ if compose run --rm --entrypoint sh certbot -c \
   exit 0
 fi
 
-echo "creating auto signed cert for ${STAGING_DOMAIN}..."
+echo "creating self-signed cert for ${STAGING_DOMAIN}..."
 compose run --rm --entrypoint sh certbot -c "
   mkdir -p ${live} &&
   openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
@@ -50,7 +50,7 @@ compose run --rm --entrypoint sh certbot -c "
     -d ${STAGING_DOMAIN} --email ${ACME_EMAIL} \
     --agree-tos --no-eff-email"
 
-echo "reaload  nginx..."
+echo "reloading nginx..."
 compose exec nginx nginx -s reload
 
-echo "Certificate done you can launch make up_staging"
+echo "✓ Certificate ready, you can launch make up_staging"
