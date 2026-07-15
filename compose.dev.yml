@@ -14,6 +14,11 @@ services:
       target: dev
     ports:
       - "5173:5173"
+  ai:
+    build:
+      target: dev
+    ports:
+      - "3002:3002"
   postgres:
     ports:
       - "5432:5432"
