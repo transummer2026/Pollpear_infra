@@ -104,6 +104,13 @@ services:
     build:
       context: ./../Pollpear_ai
       dockerfile: Dockerfile
+    develop:
+      watch:
+        - action: rebuild
+          path: ./../Pollpear_ai/requirements.txt
+        - action: sync+restart
+          path: ./../Pollpear_ai/src
+          target: /app/src
     container_name: pollpear-ai
     depends_on:
       vault:
