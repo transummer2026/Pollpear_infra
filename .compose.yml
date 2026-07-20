@@ -31,9 +31,9 @@ services:
       redis:
         condition: service_healthy
       backend:
-        condition: service_started # TODO: a mettre a healthy plus tard
+        condition: service_healthy
       frontend:
-        condition: service_started # TODO: a mettre a healthy plus tard
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
