@@ -1,4 +1,3 @@
-name: pollpear
 services:
   prometheus:
     image: ghcr.io/transummer2026/prometheus:latest

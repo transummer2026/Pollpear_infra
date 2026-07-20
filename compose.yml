@@ -1,3 +1,4 @@
+name: pollpear
 services:
   # SERVICES POLLPEAR
   gateway:
