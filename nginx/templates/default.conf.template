@@ -5,7 +5,7 @@ map $http_upgrade $connection_upgrade {
 
 server {
     listen 80;
-    server_name ${STAGING_DOMAIN};
+    server_name ${DOMAIN};
 
     # healthcheck docker, sans TLS ni auth
     location = /healthz {
@@ -24,14 +24,14 @@ server {
 server {
     listen 443 ssl;
     http2 on;
-    server_name ${STAGING_DOMAIN};
+    server_name ${DOMAIN};
 
-    ssl_certificate     /etc/letsencrypt/live/${STAGING_DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${STAGING_DOMAIN}/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
 
     resolver 127.0.0.11 valid=10s ipv6=off;
 
-    auth_basic           "Pollpear staging";
+    auth_basic           "${NGINX_AUTH}";
     auth_basic_user_file /etc/nginx/htpasswd;
 
     proxy_set_header Host              $host;
@@ -60,9 +60,9 @@ server {
         return 301 /doc/;
     }
 
-    # TODO: gateway:8080 quand la gateway sera codée
+    # TODO: gateway:8080 quand la gateway sera branchée
     location / {
-        set $app_upstream http://frontend:5173;
+        set $app_upstream http://frontend:80;
         proxy_pass $app_upstream;
     }
 }
