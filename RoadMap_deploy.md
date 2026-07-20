@@ -35,21 +35,21 @@ deploy valide avec `up --wait` (cf. section 5)
 
 ## 3. compose
 
-- [ ] compose.yml -> rework : redevient le builder des seuls services pollpear +
+- [x] compose.yml -> rework : redevient le builder des seuls services pollpear +
       postgres/redis/vault (le monitoring en sort)
   - fix : virgules parasites dans les env de gateway (`${FRONTEND_URL},` → la virgule fait partie de
     la valeur)
   - healthchecks (fichiers fantômes, passage en `service_healthy`) : cf. section 2
-- [ ] compose.monitoring.yml -> nouveau : prometheus, grafana, alertmanager + exporters
+- [x] compose.monitoring.yml -> nouveau : prometheus, grafana, alertmanager + exporters
   - inclus par staging, et par dev à la demande (cible make dédiée)
   - adapter les `-f` du Makefile
-- [ ] compose.dev.yml -> rework : lance uniquement les services pollpear
-- [ ] compose.staging.yml -> rework
+- [x] compose.dev.yml -> rework : lance uniquement les services pollpear
+- [x] compose.staging.yml -> rework
   - fix : clé `frontend:` manquante (le bloc `build: target: dev` est rattaché à gateway → frontend
     build le stub prod vide = page nginx par défaut)
   - fix : désactiver `ai` (profile disabled comme gateway) tant que pas de code
   - services internes en build local (buildés au deploy), images infra depuis GHCR
-- [ ] compose.prod.yml -> différé (YAGNI) : les différences avec staging (domaine, htpasswd,
+- [x] compose.prod.yml -> différé (YAGNI) : les différences avec staging (domaine, htpasswd,
       ressources) se gèrent par variables d'env sur le même fichier
 - vault staging : cf. section 10 (en suspens)
 
