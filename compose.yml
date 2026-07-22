@@ -164,11 +164,34 @@ services:
     networks:
       - backend-network
 
+  garage:
+    image: ghcr.io/transummer2026/garage:v2.3.0
+    container_name: pollpear-garage
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?GARAGE_RPC_SECRET is not set in .env}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?GARAGE_ADMIN_TOKEN is not set in .env}
+    volumes:
+      - garage-data:/var/lib/garage
+      - ./garage/garage.toml:/etc/garage.toml:ro
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - core-network
+      - backend-network
+      - monitoring-network
+
 volumes:
   postgres-data:
     name: pollpear-postgres-data
   redis-data:
     name: pollpear-redis-data
+  garage-data:
+    name: pollpear-garage-data
 
 networks:
   core-network:
