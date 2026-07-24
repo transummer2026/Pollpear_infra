@@ -56,12 +56,19 @@ services:
       NESTJS_PEPPER: ${NESTJS_PEPPER}
       FRONTEND_URL: ${FRONTEND_URL}
       REDIS_URL: ${REDIS_URL}
+      GARAGE_S3_ENDPOINT: ${GARAGE_S3_ENDPOINT}
+      GARAGE_S3_REGION: ${GARAGE_S3_REGION}
+      GARAGE_S3_BUCKET: ${GARAGE_S3_BUCKET}
+      GARAGE_S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY}
+      GARAGE_S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY}
     depends_on:
       vault:
         condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      garage:
         condition: service_healthy
     restart: on-failure
     networks:
