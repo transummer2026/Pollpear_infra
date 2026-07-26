@@ -64,6 +64,10 @@ services:
   redis:
     ports:
       - "6379:6379"
+  garage:
+    ports:
+      - "3900:3900"
+      - "3902:3902"
   vault:
     build:
       context: ./../Pollpear_cyber

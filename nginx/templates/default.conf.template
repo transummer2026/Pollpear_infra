@@ -60,6 +60,14 @@ server {
         return 301 /doc/;
     }
 
+    location /uploads/ {
+        auth_basic off;
+        rewrite ^/uploads/(.*)$ /$1 break;
+        set $garage_upstream http://garage:3902;
+        proxy_pass $garage_upstream;
+        proxy_set_header Host pollpear-uploads.web.garage.localhost;
+    }
+
     # TODO: gateway:8080 quand la gateway sera branchée
     location / {
         set $app_upstream http://frontend:80;
