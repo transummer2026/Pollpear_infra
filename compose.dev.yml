@@ -14,6 +14,7 @@ services:
   backend:
     build:
       target: dev
+    command: ["npm", "run", "start:dev"]
     ports:
       - "3000:3000"
     
@@ -47,10 +48,26 @@ services:
     container_name: pollpear-studio
     command: ["npx", "prisma", "studio", "--port", "5555", "--browser", "none"]
     environment:
-      POSTGRES_URL: ${POSTGRES_URL}
+      VAULT_ADDR: http://vault:8200
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        i=0
+        until [ -f /vault/approle/pollpear-backend.env ]; do
+          if [ "$$i" -ge 60 ]; then echo "timeout waiting for /vault/approle/pollpear-backend.env" >&2; exit 1; fi
+          i=$$((i+1)); sleep 1
+        done
+        set -a; . /vault/approle/pollpear-backend.env; set +a
+        exec "$$@"
+      - --
+    volumes:
+      - vault-approle:/vault/approle:ro
     ports:
       - "5555:5555"
     depends_on:
+      vault:
+        condition: service_healthy
       postgres:
         condition: service_healthy
     restart: on-failure
@@ -81,6 +98,43 @@ services:
           - until vault status >/dev/null 2>&1; do sleep 1; done; vault audit list 2>/dev/null | grep -q 'file/' || vault audit enable file file_path=/vault/logs/audit.log
         environment:
           VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-root}
+      - command:
+          - /bin/sh
+          - -c
+          - /usr/local/bin/seed.sh
+        environment:
+          VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-root}
+          PG_USER: ${POSTGRES_USER:-pollpear}
+          PG_PASSWORD: ${POSTGRES_PASSWORD:-pollpear}
+          PG_DB: ${POSTGRES_DB:-pollpear}
+          NESTJS_PEPPER: ${NESTJS_PEPPER:-}
+          OAUTH_42_CLIENT_ID: ${OAUTH_42_CLIENT_ID:-}
+          OAUTH_42_CLIENT_SECRET: ${OAUTH_42_CLIENT_SECRET:-}
+          OAUTH_42_REDIRECT_URI: ${OAUTH_42_REDIRECT_URI:-}
+          OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
+          OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
+          OAUTH_GOOGLE_REDIRECT_URI: ${OAUTH_GOOGLE_REDIRECT_URI:-}
+          OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID:-}
+          OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET:-}
+          OAUTH_GITHUB_REDIRECT_URI: ${OAUTH_GITHUB_REDIRECT_URI:-}
+          MAIL_HOST: ${MAIL_HOST:-}
+          MAIL_PORT: ${MAIL_PORT:-}
+          MAIL_USER: ${MAIL_USER:-}
+          MAIL_PASS: ${MAIL_PASS:-}
+          MAIL_FROM: ${MAIL_FROM:-}
+          FRONTEND_URL: ${FRONTEND_URL:-}
+          GARAGE_S3_ENDPOINT: ${GARAGE_S3_ENDPOINT:-}
+          GARAGE_S3_REGION: ${GARAGE_S3_REGION:-}
+          GARAGE_S3_BUCKET: ${GARAGE_S3_BUCKET:-}
+          GARAGE_S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY:-}
+          GARAGE_S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY:-}
+          GRAFANA_USER: ${GRAFANA_USER:-}
+          GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-}
+          REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+          API_KEYS_PEPPER: ${API_KEYS_PEPPER:-}
+          SESSION_COOKIE_SECRET: ${SESSION_COOKIE_SECRET:-}
+          BACKEND_URL: ${BACKEND_URL:-}
+          GATEWAY_URL: ${GATEWAY_URL:-}
 
 volumes:
   vault-logs:

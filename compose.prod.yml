@@ -57,6 +57,7 @@ services:
   backend:
     build:
       target: prod
+    command: ["node", "dist/src/main"]
 
   frontend:
     build:

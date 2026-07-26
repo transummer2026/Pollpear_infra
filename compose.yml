@@ -62,20 +62,22 @@ services:
           target: /app/Pollpear_shared/src
     container_name: pollpear-backend
     environment:
-      POSTGRES_URL: ${POSTGRES_URL}
-      NESTJS_PEPPER: ${NESTJS_PEPPER}
-      FRONTEND_URL: ${FRONTEND_URL}
-      REDIS_URL: ${REDIS_URL}
-      GARAGE_S3_ENDPOINT: ${GARAGE_S3_ENDPOINT}
-      GARAGE_S3_REGION: ${GARAGE_S3_REGION}
-      GARAGE_S3_BUCKET: ${GARAGE_S3_BUCKET}
-      GARAGE_S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY}
-      GARAGE_S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY}
-      MAIL_HOST: ${MAIL_HOST}
-      MAIL_PORT: ${MAIL_PORT}
-      MAIL_USER: ${MAIL_USER}
-      MAIL_PASS: ${MAIL_PASS}
-      MAIL_FROM: ${MAIL_FROM}
+      VAULT_ADDR: http://vault:8200
+      NESTJS_PORT: ${NESTJS_PORT:-3000}
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        i=0
+        until [ -f /vault/approle/pollpear-backend.env ]; do
+          if [ "$$i" -ge 60 ]; then echo "timeout waiting for /vault/approle/pollpear-backend.env" >&2; exit 1; fi
+          i=$$((i+1)); sleep 1
+        done
+        set -a; . /vault/approle/pollpear-backend.env; set +a
+        exec "$$@"
+      - --
+    volumes:
+      - vault-approle:/vault/approle:ro
     depends_on:
       vault:
         condition: service_healthy
@@ -148,6 +150,8 @@ services:
       context: ./../Pollpear_cyber
       dockerfile: Dockerfile
     container_name: pollpear-vault
+    volumes:
+      - vault-approle:/vault/approle
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 30s
@@ -235,6 +239,8 @@ volumes:
     name: pollpear-redis-data
   garage-data:
     name: pollpear-garage-data
+  vault-approle:
+    name: pollpear-vault-approle
 
 networks:
   core-network:
