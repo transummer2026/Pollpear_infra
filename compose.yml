@@ -50,6 +50,9 @@ services:
         - action: sync+restart
           path: ./../Pollpear_backend/src
           target: /app/src
+        - action: sync+restart
+          path: ./../Pollpear_backend/Pollpear_shared/src
+          target: /app/Pollpear_shared/src
     container_name: pollpear-backend
     environment:
       POSTGRES_URL: ${POSTGRES_URL}
@@ -88,6 +91,9 @@ services:
         - action: sync
           path: ./../Pollpear_frontend/src
           target: /app/src
+        - action: sync
+          path: ./../Pollpear_frontend/Pollpear_shared/src
+          target: /app/Pollpear_shared/src
     container_name: pollpear-frontend
     restart: on-failure
     networks:
