@@ -1,0 +1,92 @@
+# Override prod/staging — à empiler sur compose.yml + compose.monitor.yml :
+#   docker compose -f compose.yml -f compose.monitor.yml -f compose.prod.yml up
+
+services:
+  nginx:
+    image: ghcr.io/transummer2026/nginx:alpine
+    container_name: pollpear-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is not set in .env}
+      NGINX_AUTH: ${NGINX_AUTH:?NGINX_AUTH is not set in .env}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/htpasswd:/etc/nginx/htpasswd:ro
+      - ./nginx/99-cert-reload.sh:/docker-entrypoint.d/99-cert-reload.sh:ro
+      - ./nginx/srv:/srv:ro
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - core-network
+      - monitoring-network
+
+  certbot:
+    image: ghcr.io/transummer2026/certbot:latest
+    container_name: pollpear-certbot
+    entrypoint: ["/bin/sh", "/renew-loop.sh"]
+    volumes:
+      - ./nginx/renew-loop.sh:/renew-loop.sh:ro
+      - certbot-certs:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    restart: unless-stopped
+
+  gateway:
+    build:
+      target: prod
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      target: prod
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:' + (process.env.NESTJS_PORT ?? 3000) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      target: prod
+      args:
+        GATEWAY_URL: ${GATEWAY_URL:?GATEWAY_URL is not set in .env}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ai:
+    build:
+      target: prod
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3002/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    environment:
+      GF_SERVER_ROOT_URL: https://${DOMAIN}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+
+volumes:
+  certbot-certs:
+    name: pollpear-certbot-certs
+  certbot-webroot:
+    name: pollpear-certbot-webroot

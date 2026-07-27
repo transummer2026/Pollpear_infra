@@ -1,0 +1,37 @@
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+# lmdb is the default, a db key=value,
+# we can switch to sqlite (more slowly) or 
+# fjall (experimental and advise against in the doc)
+db_engine = "lmdb"
+
+# cluster not for us, need k8s or aws/azure
+replication_factor = 1
+
+# port for internal noeuds (need it in mono-node to)
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+# do not uncomment this is in the .env
+# rpc_secret = "$(openssl rand -hex 32)"
+
+# port for the communication whith backend
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+# port for the communication with frontend
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage.localhost"
+index = "index.html"
+
+# port for the admin ( /health and /metrics)
+[admin]
+api_bind_addr = "[::]:3903"
+# do not uncomment this is in the .env
+# admin_token = "$(openssl rand -base64 32)"
+
+# metrics in public because acces in 3903 not exposed
+# metrics_token = "$(openssl rand -base64 32)"

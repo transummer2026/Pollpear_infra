@@ -4,12 +4,12 @@
 
 ### priority high
 
-- [ ] frontend : stage prod = nginx:alpine + `dist/` + conf SPA (fallback index.html)
+- [x] frontend : stage prod = nginx:alpine + `dist/` + conf SPA (fallback index.html)
   - note : les `VITE_*` sont bakées au build → l'URL de l'API est figée au build de l'image
-- [ ] backend : `nest build` + CLI prisma conservé dans l'image (pour `migrate deploy` au deploy)
+- [x] backend : `nest build` + CLI prisma conservé dans l'image (pour `migrate deploy` au deploy)
   - piège : le `postinstall` lance `prisma generate` → pas de `npm ci --omit=dev` naïf
   - healthchecks : cf. section 2
-- [ ] gateway : code attendu sous 1-2 jours → build target musl (`x86_64-unknown-linux-musl`),
+- [x] gateway : code attendu sous 1-2 jours → build target musl (`x86_64-unknown-linux-musl`),
       runtime alpine
   - préférer rustls à openssl pour éviter la friction musl
   - healthchecks : cf. section 2
@@ -23,7 +23,7 @@
 objectif : chaque service expose une route `/health`, compose passe tout en `service_healthy`, le
 deploy valide avec `up --wait` (cf. section 5)
 
-- [ ] backend : créer la route `/health` (n'existe pas dans le code) ; healthcheck compose en
+- [x] backend : créer la route `/health` (n'existe pas dans le code) ; healthcheck compose en
       `node -e "fetch(...)"` — node:slim n'a ni curl ni wget
 - [x] frontend : healthcheck du stage prod (nginx) en wget ; l'actuel `node healthcheck.ts` pointe
       vers un fichier inexistant
@@ -40,7 +40,7 @@ deploy valide avec `up --wait` (cf. section 5)
   - fix : virgules parasites dans les env de gateway (`${FRONTEND_URL},` → la virgule fait partie de
     la valeur)
   - healthchecks (fichiers fantômes, passage en `service_healthy`) : cf. section 2
-- [ ] compose.monitoring.yml -> nouveau : prometheus, grafana, alertmanager + exporters
+- [x] compose.monitoring.yml -> nouveau : prometheus, grafana, alertmanager + exporters
   - inclus par staging, et par dev à la demande (cible make dédiée)
   - adapter les `-f` du Makefile
 - [x] compose.dev.yml -> rework : lance uniquement les services pollpear
@@ -49,7 +49,7 @@ deploy valide avec `up --wait` (cf. section 5)
     build le stub prod vide = page nginx par défaut)
   - fix : désactiver `ai` (profile disabled comme gateway) tant que pas de code
   - services internes en build local (buildés au deploy), images infra depuis GHCR
-- [ ] compose.prod.yml -> différé (YAGNI) : les différences avec staging (domaine, htpasswd,
+- [x] compose.prod.yml -> différé (YAGNI) : les différences avec staging (domaine, htpasswd,
       ressources) se gèrent par variables d'env sur le même fichier
 - vault staging : cf. section 10 (en suspens)
 
@@ -70,28 +70,19 @@ deploy valide avec `up --wait` (cf. section 5)
 
 flux : bouton README (lien) -> PR dev→staging -> une CI remplit la description -> merge -> deploy
 
-- [x] créer le README racine de Pollpear (le bouton n'a nulle part où vivre aujourd'hui)
-- [x] bouton = lien compare `staging...dev?quick_pull=1` dans le README
-- [x] workflow « PR description » (`pr_deploy_description.yml` +
-      `.github/scripts/pr_deploy_description.sh`) : à l'ouverture d'une PR vers staging, génère la
-      description (bumps de sous-modules + commits staging..head) et met à jour le body de la PR
-- [x] workflow deploy au merge sur staging (`deploy_staging.yml`, `push: staging`),
-      `runs-on: [self-hosted, staging]` (runner `pollpear-staging` déjà online) — la séquence vit
-      dans `scripts/deploy.sh` (aussi appelable via `make deploy`)
-  1. checkout superprojet + `git submodule update --init --recursive` (App token + insteadOf
-     SSH→HTTPS, comme update-submodules ; le `GITHUB_TOKEN` par défaut ne peut pas cloner les autres
-     repos privés)
+- [ ] créer le README racine de Pollpear (le bouton n'a nulle part où vivre aujourd'hui)
+- [ ] bouton = lien compare `staging...dev?quick_pull=1` dans le README
+- [ ] workflow « PR description » : à l'ouverture d'une PR vers staging, un script (`scripts/*.sh`)
+      génère la description (commits/diff entre staging et dev) et met à jour le body de la PR
+- [ ] workflow deploy au merge sur staging (`push: staging`), `runs-on: [self-hosted, staging]`
+      (runner `pollpear-staging` déjà online)
+  1. checkout avec `submodules: recursive` (sinon les contextes de build sont vides)
   2. docker login GHCR avec le `GITHUB_TOKEN` éphémère (cf. section 4)
-  3. `compose build`, up de postgres seul en `--wait`, puis migrations en one-off :
-     `compose run --rm --no-deps backend npx prisma migrate deploy --config prisma.config.ts` (CLI
-     prisma dans l'image, cf. section 1)
-  4. `ensure-certs.sh` puis `compose up -d --wait` (le `--wait` valide les healthchecks, cf.
-     section 2) — build fait à l'étape 3 pour que la migration tourne sur le code de staging ; up
-     final sans rebuild
-- [x] `concurrency` group `deploy-dev-pollpear` sur le workflow deploy : jamais deux deploys en
-      parallèle
-- [x] rollback : revert du merge sur staging -> push -> le deploy se rejoue sur l'état précédent
-      (documenté dans le README et la description de PR)
+  3. up de postgres seul, puis migrations en one-off :
+     `compose run --rm backend npx prisma migrate deploy` (CLI prisma dans l'image, cf. section 1)
+  4. `compose up -d --build --wait` (le `--wait` valide les healthchecks, cf. section 2)
+- [ ] `concurrency` group sur le workflow deploy : jamais deux deploys en parallèle
+- [ ] rollback : revert du merge sur staging -> push -> le deploy se rejoue sur l'état précédent
 - dépendance : le `.env` doit être livré sur le serveur avant le premier run (cf. manquants)
 
 ## 6. certificats

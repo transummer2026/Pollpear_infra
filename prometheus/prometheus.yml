@@ -103,3 +103,10 @@ scrape_configs:
       - targets: ["ai:3002"]
         labels:
           service: ai
+
+  - job_name: garage
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["garage:3903"]
+        labels:
+          service: garage

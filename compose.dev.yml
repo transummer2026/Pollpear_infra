@@ -4,21 +4,42 @@ services:
       target: dev
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   backend:
     build:
       target: dev
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:' + (process.env.NESTJS_PORT ?? 3000) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
   frontend:
     build:
       target: dev
     ports:
       - "5173:5173"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   ai:
     build:
       target: dev
     ports:
       - "3002:3002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3002/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   postgres:
     ports:
       - "5432:5432"
@@ -43,6 +64,10 @@ services:
   redis:
     ports:
       - "6379:6379"
+  garage:
+    ports:
+      - "3900:3900"
+      - "3902:3902"
   vault:
     build:
       context: ./../Pollpear_cyber
@@ -61,15 +86,6 @@ services:
           - until vault status >/dev/null 2>&1; do sleep 1; done; vault audit list 2>/dev/null | grep -q 'file/' || vault audit enable file file_path=/vault/logs/audit.log
         environment:
           VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-root}
-  prometheus:
-    ports:
-      - "9090:9090"
-  grafana:
-    ports:
-      - "9091:3000"
-  alertmanager:
-    ports:
-      - "9093:9093"
 
 volumes:
   vault-logs:
