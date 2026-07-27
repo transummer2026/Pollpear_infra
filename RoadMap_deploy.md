@@ -87,10 +87,10 @@ flux : bouton README (lien) -> PR dev→staging -> une CI remplit la description
 
 ## 6. certificats
 
-- [x] `scripts/ensure-certs.sh` : idempotent, appelé par `make up_prod` avant le up — skip si cert LE
-      présent, sinon auto-signé 1 jour -> nginx seul -> certbot certonly webroot (best-effort : repli
-      auto-signé si LE échoue, nginx ne reste jamais sans cert) -> reload. htpasswd exigé seulement si
-      `NGINX_AUTH != off`
+- [x] `scripts/ensure-certs.sh` : idempotent, appelé par `make up_prod` avant le up — skip si cert
+      LE présent, sinon auto-signé 1 jour -> nginx seul -> certbot certonly webroot (best-effort :
+      repli auto-signé si LE échoue, nginx ne reste jamais sans cert) -> reload. htpasswd exigé
+      seulement si `NGINX_AUTH != off`
 - [x] renouvellement codé : conteneur certbot en boucle `certbot renew` toutes les 12h
       (`nginx/renew-loop.sh`) + reload nginx toutes les 6h (`nginx/99-cert-reload.sh`)
 - [ ] à valider en réel au premier passage serveur (dépend DNS + .env + htpasswd, cf. checklist)
