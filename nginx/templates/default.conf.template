@@ -60,12 +60,11 @@ server {
         return 301 /doc/;
     }
 
+    # La gateway strippe le prefixe et pose le Host vhost de Garage.
     location /uploads/ {
         auth_basic off;
-        rewrite ^/uploads/(.*)$ /$1 break;
-        set $garage_upstream http://garage:3902;
-        proxy_pass $garage_upstream;
-        proxy_set_header Host pollpear-uploads.web.garage.localhost;
+        set $gateway_upstream http://gateway:8080;
+        proxy_pass $gateway_upstream;
     }
 
     # TODO: gateway:8080 quand la gateway sera branchée
