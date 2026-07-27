@@ -26,15 +26,15 @@ services:
       FRONTEND_URL: ${FRONTEND_URL}
       REDIS_URL: ${REDIS_URL}
     depends_on:
+      redis:
+        condition: service_healthy
       vault:
         condition: service_healthy
-      redis:
+      garage:
         condition: service_healthy
       backend:
         condition: service_healthy
-      frontend:
-        condition: service_healthy
-    restart: on-failure
+    restart: unless-stopped
     networks:
       - core-network
       - backend-network
@@ -43,6 +43,13 @@ services:
     build:
       context: ./../Pollpear_backend
       dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:' + (process.env.NESTJS_PORT ?? 3000) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 0s
+      start_interval: 5s
     develop:
       watch:
         - action: rebuild
@@ -78,7 +85,7 @@ services:
         condition: service_healthy
       garage:
         condition: service_healthy
-    restart: on-failure
+    restart: unless-stopped
     networks:
       - core-network
       - backend-network
@@ -89,6 +96,13 @@ services:
       dockerfile: Dockerfile
     environment:
       BACKEND_URL: ${BACKEND_URL}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 0s
+      start_interval: 5s
     develop:
       watch:
         - action: rebuild
@@ -100,7 +114,10 @@ services:
           path: ./../Pollpear_frontend/Pollpear_shared/src
           target: /app/Pollpear_shared/src
     container_name: pollpear-frontend
-    restart: on-failure
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - core-network
 
@@ -119,7 +136,9 @@ services:
     depends_on:
       vault:
         condition: service_healthy
-    restart: on-failure
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - backend-network
 
@@ -131,9 +150,11 @@ services:
     container_name: pollpear-vault
     healthcheck:
       test: ["CMD", "vault", "status"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - core-network
@@ -156,10 +177,11 @@ services:
           "CMD-SHELL",
           "pg_isready -U ${POSTGRES_USER:-pollpear} -d ${POSTGRES_DB:-pollpear}",
         ]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
-      start_period: 10s
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - core-network
@@ -175,9 +197,11 @@ services:
       - ./redis:/redis-init:ro
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - backend-network
@@ -193,10 +217,11 @@ services:
       - ./garage/garage.toml:/etc/garage.toml:ro
     healthcheck:
       test: ["CMD", "/garage", "status"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
-      start_period: 10s
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - core-network
