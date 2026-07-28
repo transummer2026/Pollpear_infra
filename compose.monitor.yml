@@ -14,9 +14,11 @@ services:
       - prometheus-data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - core-network
@@ -36,9 +38,11 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - monitoring-network
@@ -54,9 +58,11 @@ services:
       - alertmanager-data:/alertmanager
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/ready"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - monitoring-network
@@ -72,9 +78,11 @@ services:
       - /:/host:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9100/"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - monitoring-network
@@ -90,9 +98,11 @@ services:
     # sonde sur / (liveness HTTP) et non /metrics : évite une salve de requêtes DB toutes les 10s
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9187/"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 30s
       retries: 5
+      start_period: 0s
+      start_interval: 5s
     restart: unless-stopped
     networks:
       - backend-network
