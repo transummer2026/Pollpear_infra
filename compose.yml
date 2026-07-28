@@ -62,20 +62,13 @@ services:
           target: /app/Pollpear_shared/src
     container_name: pollpear-backend
     environment:
-      POSTGRES_URL: ${POSTGRES_URL}
-      NESTJS_PEPPER: ${NESTJS_PEPPER}
-      FRONTEND_URL: ${FRONTEND_URL}
-      REDIS_URL: ${REDIS_URL}
-      GARAGE_S3_ENDPOINT: ${GARAGE_S3_ENDPOINT}
-      GARAGE_S3_REGION: ${GARAGE_S3_REGION}
-      GARAGE_S3_BUCKET: ${GARAGE_S3_BUCKET}
-      GARAGE_S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY}
-      GARAGE_S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY}
-      MAIL_HOST: ${MAIL_HOST}
-      MAIL_PORT: ${MAIL_PORT}
-      MAIL_USER: ${MAIL_USER}
-      MAIL_PASS: ${MAIL_PASS}
-      MAIL_FROM: ${MAIL_FROM}
+      VAULT_ADDR: http://vault:8200
+      NESTJS_PORT: ${NESTJS_PORT:-3000}
+      APPROLE_ENV: pollpear-backend.env
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-approle-entrypoint.sh:/usr/local/bin/vault-approle-entrypoint.sh:ro
     depends_on:
       vault:
         condition: service_healthy
@@ -133,6 +126,13 @@ services:
           path: ./../Pollpear_ai/src
           target: /app/src
     container_name: pollpear-ai
+    environment:
+      VAULT_ADDR: http://vault:8200
+      APPROLE_ENV: pollpear-ai.env
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-approle-entrypoint.sh:/usr/local/bin/vault-approle-entrypoint.sh:ro
     depends_on:
       vault:
         condition: service_healthy
@@ -148,6 +148,8 @@ services:
       context: ./../Pollpear_cyber
       dockerfile: Dockerfile
     container_name: pollpear-vault
+    volumes:
+      - vault-approle:/vault/approle
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 30s
@@ -191,12 +193,12 @@ services:
   redis:
     image: ghcr.io/transummer2026/redis:7-alpine
     container_name: pollpear-redis
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is not set in .env}
     volumes:
       - redis-data:/data
       - ./redis:/redis-init:ro
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is not set in .env}", "ping"]
       interval: 30s
       timeout: 30s
       retries: 5
@@ -235,6 +237,8 @@ volumes:
     name: pollpear-redis-data
   garage-data:
     name: pollpear-garage-data
+  vault-approle:
+    name: pollpear-vault-approle
 
 networks:
   core-network:
