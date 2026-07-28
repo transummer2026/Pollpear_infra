@@ -64,20 +64,11 @@ services:
     environment:
       VAULT_ADDR: http://vault:8200
       NESTJS_PORT: ${NESTJS_PORT:-3000}
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        i=0
-        until [ -f /vault/approle/pollpear-backend.env ]; do
-          if [ "$$i" -ge 60 ]; then echo "timeout waiting for /vault/approle/pollpear-backend.env" >&2; exit 1; fi
-          i=$$((i+1)); sleep 1
-        done
-        set -a; . /vault/approle/pollpear-backend.env; set +a
-        exec "$$@"
-      - --
+      APPROLE_ENV: pollpear-backend.env
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
       - vault-approle:/vault/approle:ro
+      - ./scripts/vault-approle-entrypoint.sh:/usr/local/bin/vault-approle-entrypoint.sh:ro
     depends_on:
       vault:
         condition: service_healthy
@@ -137,20 +128,11 @@ services:
     container_name: pollpear-ai
     environment:
       VAULT_ADDR: http://vault:8200
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        i=0
-        until [ -f /vault/approle/pollpear-ai.env ]; do
-          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
-          i=$$((i+1)); sleep 1
-        done
-        set -a; . /vault/approle/pollpear-ai.env; set +a
-        exec "$$@"
-      - --
+      APPROLE_ENV: pollpear-ai.env
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
       - vault-approle:/vault/approle:ro
+      - ./scripts/vault-approle-entrypoint.sh:/usr/local/bin/vault-approle-entrypoint.sh:ro
     depends_on:
       vault:
         condition: service_healthy
