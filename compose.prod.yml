@@ -1,14 +1,15 @@
 services:
+
   nginx:
-    image: ghcr.io/transummer2026/nginx:alpine
+    image: ghcr.io/transummer2026/modsecurity:latest
     container_name: pollpear-nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:8080"
+      - "443:8443"
     environment:
       DOMAIN: ${DOMAIN:?DOMAIN is not set in .env}
     volumes:
-      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/templates/default.conf.template:/etc/nginx/templates/conf.d/default.conf.template:ro
       - ./nginx/99-cert-reload.sh:/docker-entrypoint.d/99-cert-reload.sh:ro
       - ./nginx/srv:/srv:ro
       - front-dist:/usr/share/nginx/html:ro
@@ -23,7 +24,7 @@ services:
       nginx-secrets:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
       interval: 30s
       timeout: 30s
       retries: 5
