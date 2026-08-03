@@ -14,17 +14,11 @@ services:
           target: /app/src
     container_name: pollpear-gateway
     environment:
-      ADMIN_SERVICE_URL: ${BACKEND_URL}
-      AUTH_SERVICE_URL: ${BACKEND_URL}
-      CONTACT_SERVICE_URL: ${BACKEND_URL}
-      FEED_SERVICE_URL: ${BACKEND_URL}
-      ME_SERVICE_URL: ${BACKEND_URL}
-      POLLS_SERVICE_URL: ${BACKEND_URL}
-      ROOMS_SERVICE_URL: ${BACKEND_URL}
-      SEARCH_SERVICE_URL: ${BACKEND_URL}
-      USERS_SERVICE_URL: ${BACKEND_URL}
-      FRONTEND_URL: ${FRONTEND_URL}
-      REDIS_URL: ${REDIS_URL}
+      VAULT_ADDR: http://vault:8200
+      APPROLE_ENV: pollpear-gateway.env
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-approle-entrypoint.sh:/usr/local/bin/vault-approle-entrypoint.sh:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -44,7 +38,13 @@ services:
       context: ./../Pollpear_backend
       dockerfile: Dockerfile
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:' + (process.env.NESTJS_PORT ?? 3000) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:' + (process.env.NESTJS_PORT ?? 3000) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
       interval: 30s
       timeout: 30s
       retries: 5
@@ -63,7 +63,6 @@ services:
     container_name: pollpear-backend
     environment:
       VAULT_ADDR: http://vault:8200
-      NESTJS_PORT: ${NESTJS_PORT:-3000}
       APPROLE_ENV: pollpear-backend.env
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
@@ -90,7 +89,13 @@ services:
     environment:
       BACKEND_URL: ${BACKEND_URL}
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
       interval: 30s
       timeout: 30s
       retries: 5
@@ -198,7 +203,15 @@ services:
       - redis-data:/data
       - ./redis:/redis-init:ro
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is not set in .env}", "ping"]
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "--no-auth-warning",
+          "-a",
+          "${REDIS_PASSWORD:?REDIS_PASSWORD is not set in .env}",
+          "ping",
+        ]
       interval: 30s
       timeout: 30s
       retries: 5
