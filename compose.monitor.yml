@@ -128,14 +128,52 @@ services:
     networks:
       - monitoring-network
 
+  postgres-exporter-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-postgres-exporter-secrets
+    user: root
+    environment:
+      VAULT_ADDR: http://vault:8200
+    healthcheck:
+      disable: true
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        i=0
+        until [ -f /vault/approle/pollpear-postgres-exporter.env ]; do
+          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
+          i=$$((i+1)); sleep 1
+        done
+        . /vault/approle/pollpear-postgres-exporter.env
+        printf '%s' "$$ROLE_ID" > /tmp/role_id
+        printf '%s' "$$SECRET_ID" > /tmp/secret_id
+        exec vault agent -config=/agent/agent-postgres-exporter.hcl -exit-after-auth
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./vault-agent/agent-postgres-exporter.hcl:/agent/agent-postgres-exporter.hcl:ro
+      - postgres-exporter-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - monitoring-network
+
   postgres-exporter:
     image: ghcr.io/transummer2026/postgres-exporter:latest
     container_name: pollpear-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-pollpear}:${POSTGRES_PASSWORD:-pollpear}@postgres:5432/${POSTGRES_DB:-pollpear}?sslmode=disable
+      DATA_SOURCE_URI: postgres:5432/${POSTGRES_DB:-pollpear}?sslmode=disable
+      DATA_SOURCE_USER_FILE: /secrets/pg_user
+      DATA_SOURCE_PASS_FILE: /secrets/pg_pass
+    volumes:
+      - postgres-exporter-secrets:/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-exporter-secrets:
+        condition: service_completed_successfully
     # sonde sur / (liveness HTTP) et non /metrics : évite une salve de requêtes DB toutes les 10s
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9187/"]
@@ -226,6 +264,8 @@ volumes:
     name: pollpear-grafana-secrets
   redis-exporter-secrets:
     name: pollpear-redis-exporter-secrets
+  postgres-exporter-secrets:
+    name: pollpear-postgres-exporter-secrets
   alertmanager-data:
     name: pollpear-alertmanager-data
 
