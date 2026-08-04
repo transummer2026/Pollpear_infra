@@ -195,28 +195,60 @@ services:
       - backend-network
       - monitoring-network
 
+  redis-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-redis-secrets
+    user: root
+    environment:
+      VAULT_ADDR: http://vault:8200
+    healthcheck:
+      disable: true
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        i=0
+        until [ -f /vault/approle/pollpear-redis.env ]; do
+          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
+          i=$$((i+1)); sleep 1
+        done
+        . /vault/approle/pollpear-redis.env
+        printf '%s' "$$ROLE_ID" > /tmp/role_id
+        printf '%s' "$$SECRET_ID" > /tmp/secret_id
+        exec vault agent -config=/agent/agent-redis.hcl -exit-after-auth
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./vault-agent/agent-redis.hcl:/agent/agent-redis.hcl:ro
+      - redis-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - backend-network
+
   redis:
     image: ghcr.io/transummer2026/redis:7-alpine
     container_name: pollpear-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is not set in .env}
+    command: ["redis-server", "/secrets/redis.conf", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
       - ./redis:/redis-init:ro
+      - redis-secrets:/secrets:ro
     healthcheck:
       test:
         [
-          "CMD",
-          "redis-cli",
-          "--no-auth-warning",
-          "-a",
-          "${REDIS_PASSWORD:?REDIS_PASSWORD is not set in .env}",
-          "ping",
+          "CMD-SHELL",
+          "redis-cli --no-auth-warning -a \"$(sed -n 's/^requirepass //p' /secrets/redis.conf)\" ping | grep -q PONG",
         ]
       interval: 30s
       timeout: 30s
       retries: 5
       start_period: 0s
       start_interval: 5s
+    depends_on:
+      redis-secrets:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - backend-network
@@ -248,6 +280,8 @@ volumes:
     name: pollpear-postgres-data
   redis-data:
     name: pollpear-redis-data
+  redis-secrets:
+    name: pollpear-redis-secrets
   garage-data:
     name: pollpear-garage-data
   vault-approle:

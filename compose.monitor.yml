@@ -25,16 +25,54 @@ services:
       - backend-network
       - monitoring-network
 
+  grafana-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-grafana-secrets
+    user: root
+    environment:
+      VAULT_ADDR: http://vault:8200
+    healthcheck:
+      disable: true
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        i=0
+        until [ -f /vault/approle/pollpear-grafana.env ]; do
+          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
+          i=$$((i+1)); sleep 1
+        done
+        . /vault/approle/pollpear-grafana.env
+        printf '%s' "$$ROLE_ID" > /tmp/role_id
+        printf '%s' "$$SECRET_ID" > /tmp/secret_id
+        exec vault agent -config=/agent/agent-grafana.hcl -exit-after-auth
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./vault-agent/agent-grafana.hcl:/agent/agent-grafana.hcl:ro
+      - grafana-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - monitoring-network
+
   grafana:
     image: ghcr.io/transummer2026/grafana:latest
     container_name: pollpear-grafana
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        . /secrets/grafana.env
+        export GF_SECURITY_ADMIN_USER GF_SECURITY_ADMIN_PASSWORD
+        exec /run.sh
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
+      - grafana-secrets:/secrets:ro
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:?GRAFANA_USER is not set in .env}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is not set in .env}
       GF_USERS_ALLOW_SIGN_UP: "false"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
@@ -43,6 +81,9 @@ services:
       retries: 5
       start_period: 0s
       start_interval: 5s
+    depends_on:
+      grafana-secrets:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - monitoring-network
@@ -125,15 +166,52 @@ services:
     networks:
       - monitoring-network
 
+  redis-exporter-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-redis-exporter-secrets
+    user: root
+    environment:
+      VAULT_ADDR: http://vault:8200
+    healthcheck:
+      disable: true
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        i=0
+        until [ -f /vault/approle/pollpear-redis-exporter.env ]; do
+          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
+          i=$$((i+1)); sleep 1
+        done
+        . /vault/approle/pollpear-redis-exporter.env
+        printf '%s' "$$ROLE_ID" > /tmp/role_id
+        printf '%s' "$$SECRET_ID" > /tmp/secret_id
+        exec vault agent -config=/agent/agent-redis-exporter.hcl -exit-after-auth
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./vault-agent/agent-redis-exporter.hcl:/agent/agent-redis-exporter.hcl:ro
+      - redis-exporter-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - monitoring-network
+
   # pas de healthcheck : image scratch (aucun shell/wget pour sonder /metrics)
   redis-exporter:
     image: ghcr.io/transummer2026/redis-exporter:latest
     container_name: pollpear-redis-exporter
     environment:
       REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD_FILE: /secrets/redis-password
+    volumes:
+      - redis-exporter-secrets:/secrets:ro
     depends_on:
       redis:
         condition: service_healthy
+      redis-exporter-secrets:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - backend-network
@@ -144,6 +222,10 @@ volumes:
     name: pollpear-prometheus-data
   grafana-data:
     name: pollpear-grafana-data
+  grafana-secrets:
+    name: pollpear-grafana-secrets
+  redis-exporter-secrets:
+    name: pollpear-redis-exporter-secrets
   alertmanager-data:
     name: pollpear-alertmanager-data
 
