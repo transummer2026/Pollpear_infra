@@ -152,9 +152,19 @@ services:
     build:
       context: ./../Pollpear_cyber
       dockerfile: Dockerfile
+    image: pollpear-vault:dev
     container_name: pollpear-vault
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-root}
     volumes:
       - vault-approle:/vault/approle
+      - vault-logs:/vault/logs
+      - ./../.env:/run/secrets/dotenv:ro
+    post_start:
+      - command:
+          - /bin/sh
+          - -c
+          - /usr/local/bin/seed.sh
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 30s
@@ -365,6 +375,8 @@ volumes:
     name: pollpear-garage-data
   vault-approle:
     name: pollpear-vault-approle
+  vault-logs:
+    name: pollpear-vault-logs
 
 networks:
   core-network:
