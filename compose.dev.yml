@@ -96,9 +96,9 @@ services:
           - /usr/local/bin/seed.sh
         environment:
           VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-root}
-          PG_USER: ${POSTGRES_USER:-pollpear}
-          PG_PASSWORD: ${POSTGRES_PASSWORD:-pollpear}
-          PG_DB: ${POSTGRES_DB:-pollpear}
+          POSTGRES_USER: ${POSTGRES_USER:-pollpear}
+          POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pollpear}
+          POSTGRES_DB: ${POSTGRES_DB:-pollpear}
           NESTJS_PEPPER: ${NESTJS_PEPPER:-}
           OAUTH_42_CLIENT_ID: ${OAUTH_42_CLIENT_ID:-}
           OAUTH_42_CLIENT_SECRET: ${OAUTH_42_CLIENT_SECRET:-}
@@ -116,15 +116,18 @@ services:
           MAIL_FROM: ${MAIL_FROM:-}
           FRONTEND_URL: ${FRONTEND_URL:-}
           GARAGE_S3_ENDPOINT: ${GARAGE_S3_ENDPOINT:-}
+          GARAGE_S3_URL: ${GARAGE_S3_URL:-}
+          GARAGE_S3_UPLOADS_HOST: ${GARAGE_S3_UPLOADS_HOST:-}
           GARAGE_S3_REGION: ${GARAGE_S3_REGION:-}
           GARAGE_S3_BUCKET: ${GARAGE_S3_BUCKET:-}
           GARAGE_S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY:-}
           GARAGE_S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY:-}
-          GRAFANA_USER: ${GRAFANA_USER:-}
-          GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-}
+          # GRAFANA_USER/GRAFANA_PASSWORD: seed.sh n'écrit plus secret/pollpear/grafana
+          # GRAFANA_USER: ${GRAFANA_USER:-}
+          # GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-}
           REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-          API_KEYS_PEPPER: ${API_KEYS_PEPPER:-}
-          SESSION_COOKIE_SECRET: ${SESSION_COOKIE_SECRET:-}
+          # API_KEYS_PEPPER: seed.sh n'écrit plus secret/pollpear/api-keys
+          # API_KEYS_PEPPER: ${API_KEYS_PEPPER:-}
           BACKEND_URL: ${BACKEND_URL:-}
           GATEWAY_URL: ${GATEWAY_URL:-}
 
