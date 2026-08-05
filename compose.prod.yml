@@ -19,6 +19,8 @@ services:
     depends_on:
       frontend:
         condition: service_completed_successfully
+      frontend-secrets:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
       interval: 30s
@@ -60,13 +62,45 @@ services:
   frontend:
     build:
       target: prod
-      args:
-        GATEWAY_URL: /api
     restart: "no"
     healthcheck:
       disable: true
     volumes:
       - front-dist:/out
+
+  frontend-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-frontend-secrets
+    user: root
+    environment:
+      VAULT_ADDR: http://vault:8200
+    healthcheck:
+      disable: true
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        i=0
+        until [ -f /vault/approle/pollpear-frontend.env ]; do
+          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
+          i=$$((i+1)); sleep 1
+        done
+        . /vault/approle/pollpear-frontend.env
+        printf '%s' "$$ROLE_ID" > /tmp/role_id
+        printf '%s' "$$SECRET_ID" > /tmp/secret_id
+        exec vault agent -config=/agent/agent-frontend.hcl -exit-after-auth
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./vault-agent/agent-frontend.hcl:/agent/agent-frontend.hcl:ro
+      - front-dist:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+      frontend:
+        condition: service_completed_successfully
+    restart: on-failure
+    networks:
+      - core-network
 
   ai:
     build:

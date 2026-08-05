@@ -86,8 +86,6 @@ services:
     build:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
-    environment:
-      GATEWAY_URL: ${GATEWAY_URL}
     healthcheck:
       test:
         [
