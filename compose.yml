@@ -64,11 +64,6 @@ services:
     environment:
       VAULT_ADDR: http://vault:8200
       APPROLE_ENV: pollpear-backend.env
-      FRONTEND_URL: ${FRONTEND_URL}
-      WS_PATH: ${WS_PATH:-/ws}
-      WS_PING_INTERVAL: ${WS_PING_INTERVAL:-25000}
-      WS_PING_TIMEOUT: ${WS_PING_TIMEOUT:-20000}
-      WS_MAX_PAYLOAD: ${WS_MAX_PAYLOAD:-1000000}
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
       - vault-approle:/vault/approle:ro
