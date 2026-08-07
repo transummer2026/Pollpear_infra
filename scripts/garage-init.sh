@@ -1,26 +1,30 @@
 #!/usr/bin/env bash
 # Provisionne Garage pour Pollpear, de facon idempotente :
-#   layout du noeud -> bucket -> import de la cle backend (creds depuis .env)
+#   layout du noeud -> bucket -> import de la cle backend (creds depuis Vault)
 #   -> droits read/write -> service web public du bucket.
 # Lance automatiquement par 'make up' une fois garage healthy.
-# Les creds S3 (GARAGE_S3_ACCESS_KEY / _SECRET_KEY) viennent de .env : la cle est
-# IMPORTEE, donc stable meme apres un 'make fclean' qui supprime le volume garage.
+# Les creds S3 (GARAGE_S3_ACCESS_KEY / _SECRET_KEY) viennent de Vault
+# (secret/pollpear/s3, seede depuis .env) : la cle est IMPORTEE, donc stable
+# meme apres un 'make fclean' qui supprime le volume garage.
 # Surchargeables : GARAGE_CONTAINER, GARAGE_ZONE, GARAGE_CAPACITY, GARAGE_KEY_NAME
-# + GARAGE_S3_BUCKET / _ACCESS_KEY / _SECRET_KEY (via .env).
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-# shellcheck source=/dev/null
-if [[ -f "${ROOT_DIR}/.env" ]]; then set -a; . "${ROOT_DIR}/.env"; set +a; fi
-
 CONTAINER="${GARAGE_CONTAINER:-pollpear-garage}"
+VAULT_CONTAINER="${VAULT_CONTAINER:-pollpear-vault}"
 ZONE="${GARAGE_ZONE:-dc1}"
 CAPACITY="${GARAGE_CAPACITY:-10GB}"
 KEY_NAME="${GARAGE_KEY_NAME:-pollpear-backend}"
-BUCKET="${GARAGE_S3_BUCKET:-pollpear-uploads}"
-: "${GARAGE_S3_ACCESS_KEY:?missing in .env}"
-: "${GARAGE_S3_SECRET_KEY:?missing in .env}"
+
+vkv() {
+  docker exec "${VAULT_CONTAINER}" sh -c \
+    "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=\"\$VAULT_DEV_ROOT_TOKEN_ID\" vault kv get -field=$1 secret/pollpear/s3"
+}
+
+BUCKET="$(vkv bucket)"
+GARAGE_S3_ACCESS_KEY="$(vkv access_key)"
+GARAGE_S3_SECRET_KEY="$(vkv secret_key)"
+: "${GARAGE_S3_ACCESS_KEY:?missing in vault secret/pollpear/s3}"
+: "${GARAGE_S3_SECRET_KEY:?missing in vault secret/pollpear/s3}"
 
 g() { docker exec -e RUST_LOG=warn "${CONTAINER}" /garage "$@"; }
 
@@ -60,7 +64,7 @@ fi
 if g key list | grep -q "${GARAGE_S3_ACCESS_KEY}"; then
   echo "Key ${KEY_NAME} already present"
 else
-  echo "Importing key ${KEY_NAME} (creds from .env)..."
+  echo "Importing key ${KEY_NAME} (creds from vault)..."
   g key import --yes -n "${KEY_NAME}" "${GARAGE_S3_ACCESS_KEY}" "${GARAGE_S3_SECRET_KEY}" >/dev/null
 fi
 
@@ -70,4 +74,4 @@ g bucket allow --read --write "${BUCKET}" --key "${GARAGE_S3_ACCESS_KEY}" >/dev/
 echo "Enabling public website on bucket..."
 g bucket website --allow "${BUCKET}" >/dev/null
 
-echo "Garage ready: bucket '${BUCKET}', key ${GARAGE_S3_ACCESS_KEY} (imported from .env)"
+echo "Garage ready: bucket '${BUCKET}', key ${GARAGE_S3_ACCESS_KEY} (imported from vault)"
