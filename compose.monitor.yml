@@ -65,15 +65,13 @@ services:
       - -ec
       - |
         . /secrets/grafana.env
-        export GF_SECURITY_ADMIN_USER GF_SECURITY_ADMIN_PASSWORD
+        export GF_SECURITY_ADMIN_USER GF_SECURITY_ADMIN_PASSWORD GF_USERS_ALLOW_SIGN_UP
         exec /run.sh
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
       - grafana-secrets:/secrets:ro
-    environment:
-      GF_USERS_ALLOW_SIGN_UP: "false"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
@@ -164,7 +162,7 @@ services:
     image: ghcr.io/transummer2026/postgres-exporter:latest
     container_name: pollpear-postgres-exporter
     environment:
-      DATA_SOURCE_URI: postgres:5432/${POSTGRES_DB:-pollpear}?sslmode=disable
+      DATA_SOURCE_URI_FILE: /secrets/pg_uri
       DATA_SOURCE_USER_FILE: /secrets/pg_user
       DATA_SOURCE_PASS_FILE: /secrets/pg_pass
     volumes:

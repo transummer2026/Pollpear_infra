@@ -24,4 +24,10 @@ template {
   contents    = "{{- with secret \"secret/data/pollpear/db\" -}}{{ .Data.data.password }}{{- end -}}"
 }
 
+template {
+  destination = "/secrets/pg_uri"
+  perms       = "0644"
+  contents    = "{{- with secret \"secret/data/pollpear/db\" -}}postgres:5432/{{ .Data.data.database }}?sslmode=disable{{- end -}}"
+}
+
 exit_after_auth = true

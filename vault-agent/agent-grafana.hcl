@@ -19,6 +19,7 @@ template {
 {{- with secret "secret/data/pollpear/grafana" -}}
 GF_SECURITY_ADMIN_USER='{{ .Data.data.admin_user }}'
 GF_SECURITY_ADMIN_PASSWORD='{{ .Data.data.admin_password }}'
+GF_USERS_ALLOW_SIGN_UP='false'
 {{- end }}
 EOT
 }
