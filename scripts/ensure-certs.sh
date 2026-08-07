@@ -27,25 +27,6 @@ set +a
 
 : "${DOMAIN:?DOMAIN missing in .env}"
 : "${ACME_EMAIL:?ACME_EMAIL missing in .env}"
-if [[ "${NGINX_AUTH:-}" != "off" ]]; then
-  htpasswd_file=Pollpear_infra/nginx/htpasswd
-  [[ -d "$htpasswd_file" ]] && rmdir "$htpasswd_file"
-  if [[ ! -f "$htpasswd_file" ]]; then
-    : "${HTPASSWD_USER:?HTPASSWD_USER missing in .env (basic auth active)}"
-    : "${HTPASSWD_PASSWORD:?HTPASSWD_PASSWORD missing in .env}"
-    echo "→ génération de $htpasswd_file (auth basic \"${NGINX_AUTH}\")…"
-    tmp="$(mktemp)"
-    docker run --rm \
-      -e U="$HTPASSWD_USER" -e P="$HTPASSWD_PASSWORD" \
-      -e SU="${SMOKE_USER:-}" -e SP="${SMOKE_PASSWORD:-}" \
-      httpd:2.4-alpine sh -c '
-        htpasswd -Bbn "$U" "$P"
-        [ -n "$SU" ] && htpasswd -Bbn "$SU" "$SP"
-      ' > "$tmp"
-    mv "$tmp" "$htpasswd_file"
-    echo "✓ htpasswd généré (${HTPASSWD_USER}${SMOKE_USER:+ + ${SMOKE_USER}})"
-  fi
-fi
 
 live="/etc/letsencrypt/live/${DOMAIN}"
 

@@ -31,8 +31,7 @@ server {
 
     resolver 127.0.0.11 valid=10s ipv6=off;
 
-    auth_basic           "${NGINX_AUTH}";
-    auth_basic_user_file /etc/nginx/htpasswd;
+    include /secrets/auth.conf;
 
     proxy_set_header Host              $host;
     proxy_set_header X-Real-IP         $remote_addr;
