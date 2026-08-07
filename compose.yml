@@ -157,7 +157,7 @@ services:
     volumes:
       - vault-approle:/vault/approle
       - vault-logs:/vault/logs
-      - ./../.env:/run/secrets/dotenv:ro
+      - ./../Pollpear_cyber/.env:/run/secrets/dotenv:ro
     post_start:
       - command:
           - /bin/sh
