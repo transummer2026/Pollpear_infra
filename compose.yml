@@ -87,7 +87,7 @@ services:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
     environment:
-      BACKEND_URL: ${BACKEND_URL}
+      GATEWAY_URL: ${GATEWAY_URL}
     healthcheck:
       test:
         [
