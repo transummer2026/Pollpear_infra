@@ -17,21 +17,36 @@ services:
     command: ["npm", "run", "start:dev"]
     ports:
       - "3000:3000"
-    
+
   frontend:
     build:
       target: dev
     ports:
       - "5173:5173"
-    
+
   ai:
     build:
       target: dev
-    command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "3002", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "src.api.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "3002",
+        "--reload",
+      ]
     ports:
       - "3002:3002"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3002/health', timeout=4)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:3002/health', timeout=4)",
+        ]
       interval: 30s
       timeout: 30s
       retries: 5
@@ -128,10 +143,6 @@ services:
           REDIS_PASSWORD: ${REDIS_PASSWORD:-}
           # API_KEYS_PEPPER: seed.sh n'écrit plus secret/pollpear/api-keys
           # API_KEYS_PEPPER: ${API_KEYS_PEPPER:-}
-          WS_PATH: ${WS_PATH:-}
-          WS_PING_INTERVAL: ${WS_PING_INTERVAL:-}
-          WS_PING_TIMEOUT: ${WS_PING_TIMEOUT:-}
-          WS_MAX_PAYLOAD: ${WS_MAX_PAYLOAD:-}
           BACKEND_URL: ${BACKEND_URL:-}
           GATEWAY_URL: ${GATEWAY_URL:-}
 
