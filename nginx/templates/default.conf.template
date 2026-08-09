@@ -67,6 +67,14 @@ server {
         proxy_pass $gateway_upstream;
     }
 
+
+    location /ws {
+        set $ws_upstream http://gateway:8080;
+        proxy_pass $ws_upstream;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
     # TODO: gateway:8080 quand la gateway sera branchée
     location / {
         set $app_upstream http://frontend:80;
