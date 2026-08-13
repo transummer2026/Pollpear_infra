@@ -141,8 +141,6 @@ services:
           # GRAFANA_USER: ${GRAFANA_USER:-}
           # GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-}
           REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-          # API_KEYS_PEPPER: seed.sh n'écrit plus secret/pollpear/api-keys
-          # API_KEYS_PEPPER: ${API_KEYS_PEPPER:-}
           BACKEND_URL: ${BACKEND_URL:-}
           GATEWAY_URL: ${GATEWAY_URL:-}
 
