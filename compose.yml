@@ -182,24 +182,14 @@ services:
     user: root
     environment:
       VAULT_ADDR: http://vault:8200
+      SERVICE: pollpear-postgres
     healthcheck:
       disable: true
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        i=0
-        until [ -f /vault/approle/pollpear-postgres.env ]; do
-          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
-          i=$$((i+1)); sleep 1
-        done
-        . /vault/approle/pollpear-postgres.env
-        printf '%s' "$$ROLE_ID" > /tmp/role_id
-        printf '%s' "$$SECRET_ID" > /tmp/secret_id
-        exec vault agent -config=/agent/agent-postgres.hcl -exit-after-auth
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
     volumes:
       - vault-approle:/vault/approle:ro
-      - ./vault-agent/agent-postgres.hcl:/agent/agent-postgres.hcl:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-postgres.hcl:/agent/agent.hcl:ro
       - postgres-secrets:/secrets
     depends_on:
       vault:
@@ -248,24 +238,14 @@ services:
     user: root
     environment:
       VAULT_ADDR: http://vault:8200
+      SERVICE: pollpear-redis
     healthcheck:
       disable: true
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        i=0
-        until [ -f /vault/approle/pollpear-redis.env ]; do
-          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
-          i=$$((i+1)); sleep 1
-        done
-        . /vault/approle/pollpear-redis.env
-        printf '%s' "$$ROLE_ID" > /tmp/role_id
-        printf '%s' "$$SECRET_ID" > /tmp/secret_id
-        exec vault agent -config=/agent/agent-redis.hcl -exit-after-auth
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
     volumes:
       - vault-approle:/vault/approle:ro
-      - ./vault-agent/agent-redis.hcl:/agent/agent-redis.hcl:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-redis.hcl:/agent/agent.hcl:ro
       - redis-secrets:/secrets
     depends_on:
       vault:
@@ -306,24 +286,14 @@ services:
     user: root
     environment:
       VAULT_ADDR: http://vault:8200
+      SERVICE: pollpear-garage
     healthcheck:
       disable: true
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        i=0
-        until [ -f /vault/approle/pollpear-garage.env ]; do
-          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
-          i=$$((i+1)); sleep 1
-        done
-        . /vault/approle/pollpear-garage.env
-        printf '%s' "$$ROLE_ID" > /tmp/role_id
-        printf '%s' "$$SECRET_ID" > /tmp/secret_id
-        exec vault agent -config=/agent/agent-garage.hcl -exit-after-auth
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
     volumes:
       - vault-approle:/vault/approle:ro
-      - ./vault-agent/agent-garage.hcl:/agent/agent-garage.hcl:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-garage.hcl:/agent/agent.hcl:ro
       - garage-secrets:/secrets
     depends_on:
       vault:

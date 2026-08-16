@@ -75,24 +75,14 @@ services:
     user: root
     environment:
       VAULT_ADDR: http://vault:8200
+      SERVICE: pollpear-frontend
     healthcheck:
       disable: true
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        i=0
-        until [ -f /vault/approle/pollpear-frontend.env ]; do
-          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
-          i=$$((i+1)); sleep 1
-        done
-        . /vault/approle/pollpear-frontend.env
-        printf '%s' "$$ROLE_ID" > /tmp/role_id
-        printf '%s' "$$SECRET_ID" > /tmp/secret_id
-        exec vault agent -config=/agent/agent-frontend.hcl -exit-after-auth
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
     volumes:
       - vault-approle:/vault/approle:ro
-      - ./vault-agent/agent-frontend.hcl:/agent/agent-frontend.hcl:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-frontend.hcl:/agent/agent.hcl:ro
       - front-dist:/secrets
     depends_on:
       vault:
@@ -109,24 +99,14 @@ services:
     user: root
     environment:
       VAULT_ADDR: http://vault:8200
+      SERVICE: pollpear-nginx
     healthcheck:
       disable: true
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        i=0
-        until [ -f /vault/approle/pollpear-nginx.env ]; do
-          if [ "$$i" -ge 60 ]; then echo "timeout waiting for approle creds" >&2; exit 1; fi
-          i=$$((i+1)); sleep 1
-        done
-        . /vault/approle/pollpear-nginx.env
-        printf '%s' "$$ROLE_ID" > /tmp/role_id
-        printf '%s' "$$SECRET_ID" > /tmp/secret_id
-        exec vault agent -config=/agent/agent-nginx.hcl -exit-after-auth
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
     volumes:
       - vault-approle:/vault/approle:ro
-      - ./vault-agent/agent-nginx.hcl:/agent/agent-nginx.hcl:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-nginx.hcl:/agent/agent.hcl:ro
       - nginx-secrets:/secrets
     depends_on:
       vault:
