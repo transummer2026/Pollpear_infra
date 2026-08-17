@@ -17,7 +17,7 @@ template {
   perms       = "0644"
   contents    = <<EOT
 {{- with secret "secret/data/pollpear/redis" -}}
-{"redis://redis:6379":"{{ .Data.data.password }}"}
+{"redis://redis:6379":{{ .Data.data.password | toJSON }}}
 {{- end }}
 EOT
 }

@@ -17,9 +17,15 @@ template {
   perms       = "0644"
   contents    = <<EOT
 {{- with secret "secret/data/pollpear/redis" -}}
-requirepass {{ .Data.data.password }}
+requirepass {{ .Data.data.password | toJSON }}
 {{- end }}
 EOT
+}
+
+template {
+  destination = "/secrets/password"
+  perms       = "0644"
+  contents    = "{{- with secret \"secret/data/pollpear/redis\" -}}{{ .Data.data.password }}{{- end -}}"
 }
 
 exit_after_auth = true

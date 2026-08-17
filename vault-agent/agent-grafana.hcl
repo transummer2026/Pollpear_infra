@@ -13,15 +13,15 @@ auto_auth {
 }
 
 template {
-  destination = "/secrets/grafana.env"
+  destination = "/secrets/admin_user"
   perms       = "0644"
-  contents    = <<EOT
-{{- with secret "secret/data/pollpear/grafana" -}}
-GF_SECURITY_ADMIN_USER='{{ .Data.data.admin_user }}'
-GF_SECURITY_ADMIN_PASSWORD='{{ .Data.data.admin_password }}'
-GF_USERS_ALLOW_SIGN_UP='false'
-{{- end }}
-EOT
+  contents    = "{{- with secret \"secret/data/pollpear/grafana\" -}}{{ .Data.data.admin_user }}{{- end -}}"
+}
+
+template {
+  destination = "/secrets/admin_password"
+  perms       = "0644"
+  contents    = "{{- with secret \"secret/data/pollpear/grafana\" -}}{{ .Data.data.admin_password }}{{- end -}}"
 }
 
 exit_after_auth = true

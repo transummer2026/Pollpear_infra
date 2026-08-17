@@ -13,15 +13,21 @@ auto_auth {
 }
 
 template {
-  destination = "/secrets/postgres.env"
+  destination = "/secrets/postgres_user"
   perms       = "0644"
-  contents    = <<EOT
-{{- with secret "secret/data/pollpear/db" -}}
-POSTGRES_USER='{{ .Data.data.username }}'
-POSTGRES_PASSWORD='{{ .Data.data.password }}'
-POSTGRES_DB='{{ .Data.data.database }}'
-{{- end }}
-EOT
+  contents    = "{{- with secret \"secret/data/pollpear/db\" -}}{{ .Data.data.username }}{{- end -}}"
+}
+
+template {
+  destination = "/secrets/postgres_password"
+  perms       = "0644"
+  contents    = "{{- with secret \"secret/data/pollpear/db\" -}}{{ .Data.data.password }}{{- end -}}"
+}
+
+template {
+  destination = "/secrets/postgres_db"
+  perms       = "0644"
+  contents    = "{{- with secret \"secret/data/pollpear/db\" -}}{{ .Data.data.database }}{{- end -}}"
 }
 
 exit_after_auth = true

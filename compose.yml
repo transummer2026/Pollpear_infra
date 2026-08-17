@@ -201,13 +201,10 @@ services:
   postgres:
     image: ghcr.io/transummer2026/postgres:16-alpine
     container_name: pollpear-postgres
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        . /secrets/postgres.env
-        export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
-        exec docker-entrypoint.sh postgres
+    environment:
+      POSTGRES_USER_FILE: /secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /secrets/postgres_password
+      POSTGRES_DB_FILE: /secrets/postgres_db
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres:/docker-entrypoint-initdb.d:ro
@@ -216,7 +213,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          ". /secrets/postgres.env; pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\"",
+          "pg_isready -U \"$$(cat /secrets/postgres_user)\" -d \"$$(cat /secrets/postgres_db)\"",
         ]
       interval: 30s
       timeout: 30s
@@ -266,7 +263,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "redis-cli --no-auth-warning -a \"$(sed -n 's/^requirepass //p' /secrets/redis.conf)\" ping | grep -q PONG",
+          "redis-cli --no-auth-warning -a \"$$(cat /secrets/password)\" ping | grep -q PONG",
         ]
       interval: 30s
       timeout: 30s

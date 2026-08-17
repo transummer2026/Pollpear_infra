@@ -15,7 +15,7 @@ auto_auth {
 template {
   destination = "/secrets/config.json"
   perms       = "0644"
-  contents    = "{{- with secret \"secret/data/pollpear/app\" -}}{\"gateway_url\":\"{{ .Data.data.gateway_url }}\"}{{- end -}}"
+  contents    = "{{- with secret \"secret/data/pollpear/app\" -}}{\"gateway_url\":{{ .Data.data.gateway_url | toJSON }}}{{- end -}}"
 }
 
 exit_after_auth = true

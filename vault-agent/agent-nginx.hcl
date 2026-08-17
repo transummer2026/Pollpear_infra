@@ -26,7 +26,7 @@ template {
 {{- if eq .Data.data.auth "off" }}
 auth_basic off;
 {{- else }}
-auth_basic           "{{ .Data.data.auth }}";
+auth_basic           {{ .Data.data.auth | toJSON }};
 auth_basic_user_file /secrets/htpasswd;
 {{- end }}
 {{- end }}
