@@ -24,4 +24,22 @@ template {
   contents    = "{{- with secret \"secret/data/pollpear/garage\" -}}{{ .Data.data.admin_token }}{{- end -}}"
 }
 
+template {
+  destination = "/secrets/s3_bucket"
+  perms       = "0600"
+  contents    = "{{- with secret \"secret/data/pollpear/s3\" -}}{{ .Data.data.bucket }}{{- end -}}"
+}
+
+template {
+  destination = "/secrets/s3_access_key"
+  perms       = "0600"
+  contents    = "{{- with secret \"secret/data/pollpear/s3\" -}}{{ .Data.data.access_key }}{{- end -}}"
+}
+
+template {
+  destination = "/secrets/s3_secret_key"
+  perms       = "0600"
+  contents    = "{{- with secret \"secret/data/pollpear/s3\" -}}{{ .Data.data.secret_key }}{{- end -}}"
+}
+
 exit_after_auth = true

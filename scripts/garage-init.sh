@@ -10,19 +10,18 @@
 set -euo pipefail
 
 CONTAINER="${GARAGE_CONTAINER:-pollpear-garage}"
-VAULT_CONTAINER="${VAULT_CONTAINER:-pollpear-vault}"
+SECRETS_VOLUME="${GARAGE_SECRETS_VOLUME:-pollpear-garage-secrets}"
 ZONE="${GARAGE_ZONE:-dc1}"
 CAPACITY="${GARAGE_CAPACITY:-10GB}"
 KEY_NAME="${GARAGE_KEY_NAME:-pollpear-backend}"
 
-vkv() {
-  docker exec "${VAULT_CONTAINER}" sh -c \
-    "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=\"\$VAULT_DEV_ROOT_TOKEN_ID\" vault kv get -field=$1 secret/pollpear/s3"
+vsecret() {
+  docker run --rm --user root --entrypoint cat -v "${SECRETS_VOLUME}:/secrets:ro" pollpear-vault:dev "/secrets/$1"
 }
 
-BUCKET="$(vkv bucket)"
-GARAGE_S3_ACCESS_KEY="$(vkv access_key)"
-GARAGE_S3_SECRET_KEY="$(vkv secret_key)"
+BUCKET="$(vsecret s3_bucket)"
+GARAGE_S3_ACCESS_KEY="$(vsecret s3_access_key)"
+GARAGE_S3_SECRET_KEY="$(vsecret s3_secret_key)"
 : "${GARAGE_S3_ACCESS_KEY:?missing in vault secret/pollpear/s3}"
 : "${GARAGE_S3_SECRET_KEY:?missing in vault secret/pollpear/s3}"
 
