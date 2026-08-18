@@ -33,4 +33,16 @@ auth_basic_user_file /secrets/htpasswd;
 EOT
 }
 
+template {
+  destination = "/secrets/waf.env"
+  perms       = "0600"
+  contents    = <<EOT
+{{- with secret "secret/data/pollpear/waf" -}}
+{{- range $k, $v := .Data.data }}
+{{ $k }}={{ $v | toJSON }}
+{{- end }}
+{{- end }}
+EOT
+}
+
 exit_after_auth = true
