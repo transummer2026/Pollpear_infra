@@ -14,7 +14,7 @@ services:
           target: /app/src
     container_name: pollpear-gateway
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-gateway.env
     volumes:
       - vault-approle:/vault/approle:ro
@@ -62,7 +62,7 @@ services:
           target: /app/Pollpear_shared/src
     container_name: pollpear-backend
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-backend.env
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
@@ -87,7 +87,7 @@ services:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-frontend.env
     healthcheck:
       test:
@@ -133,7 +133,7 @@ services:
           target: /app/src
     container_name: pollpear-ai
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-ai.env
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
@@ -157,6 +157,7 @@ services:
     container_name: pollpear-vault
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-root}
+      VAULT_ADDR: ${VAULT_ADDR:-http://127.0.0.1:8200}
     volumes:
       - vault-approle:/vault/approle
       - vault-logs:/vault/logs
@@ -184,7 +185,7 @@ services:
     container_name: pollpear-postgres-secrets
     user: root
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       SERVICE: pollpear-postgres
     healthcheck:
       disable: true
@@ -237,7 +238,7 @@ services:
     container_name: pollpear-redis-secrets
     user: root
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       SERVICE: pollpear-redis
     healthcheck:
       disable: true
@@ -285,7 +286,7 @@ services:
     container_name: pollpear-garage-secrets
     user: root
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       SERVICE: pollpear-garage
     healthcheck:
       disable: true

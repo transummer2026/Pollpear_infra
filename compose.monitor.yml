@@ -30,7 +30,7 @@ services:
     container_name: pollpear-grafana-secrets
     user: root
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       SERVICE: pollpear-grafana
     healthcheck:
       disable: true
@@ -118,7 +118,7 @@ services:
     container_name: pollpear-postgres-exporter-secrets
     user: root
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       SERVICE: pollpear-postgres-exporter
     healthcheck:
       disable: true
@@ -184,7 +184,7 @@ services:
     container_name: pollpear-redis-exporter-secrets
     user: root
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       SERVICE: pollpear-redis-exporter
     healthcheck:
       disable: true

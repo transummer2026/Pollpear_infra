@@ -74,7 +74,7 @@ services:
     container_name: pollpear-frontend-secrets
     user: root
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       SERVICE: pollpear-frontend
     healthcheck:
       disable: true
@@ -98,7 +98,7 @@ services:
     container_name: pollpear-nginx-secrets
     user: root
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       SERVICE: pollpear-nginx
     healthcheck:
       disable: true

@@ -72,7 +72,7 @@ services:
     container_name: pollpear-studio
     command: ["npx", "prisma", "studio", "--port", "5555", "--browser", "none"]
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-backend.env
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
