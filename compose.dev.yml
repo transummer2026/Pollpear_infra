@@ -23,9 +23,6 @@ services:
       target: dev
     ports:
       - "5173:5173"
-    environment:
-      VAULT_ADDR: http://vault:8200
-      APPROLE_ENV: pollpear-frontend.env
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     command: ["sh", "-c", "node scripts/vault-config.mjs && npm run dev"]
     volumes:

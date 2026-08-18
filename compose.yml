@@ -86,6 +86,9 @@ services:
     build:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
+    environment:
+      VAULT_ADDR: http://vault:8200
+      APPROLE_ENV: pollpear-frontend.env
     healthcheck:
       test:
         [
