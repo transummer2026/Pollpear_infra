@@ -3,6 +3,7 @@ services:
   nginx:
     image: ghcr.io/transummer2026/modsecurity:latest
     container_name: pollpear-nginx
+    user: root
     ports:
       - "80:8080"
       - "443:8443"
