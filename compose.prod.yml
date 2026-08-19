@@ -7,17 +7,20 @@ services:
       - "443:443"
     environment:
       DOMAIN: ${DOMAIN:?DOMAIN is not set in .env}
-      NGINX_AUTH: ${NGINX_AUTH:?NGINX_AUTH is not set in .env}
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
-      - ./nginx/htpasswd:/etc/nginx/htpasswd:ro
       - ./nginx/99-cert-reload.sh:/docker-entrypoint.d/99-cert-reload.sh:ro
       - ./nginx/srv:/srv:ro
       - front-dist:/usr/share/nginx/html:ro
+      - nginx-secrets:/secrets:ro
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-webroot:/var/www/certbot:ro
     depends_on:
       frontend:
+        condition: service_completed_successfully
+      frontend-secrets:
+        condition: service_completed_successfully
+      nginx-secrets:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
@@ -60,13 +63,57 @@ services:
   frontend:
     build:
       target: prod
-      args:
-        GATEWAY_URL: /api
     restart: "no"
     healthcheck:
       disable: true
     volumes:
       - front-dist:/out
+
+  frontend-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-frontend-secrets
+    user: root
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      SERVICE: pollpear-frontend
+    healthcheck:
+      disable: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-frontend.hcl:/agent/agent.hcl:ro
+      - front-dist:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+      frontend:
+        condition: service_completed_successfully
+    restart: on-failure
+    networks:
+      - core-network
+
+  nginx-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-nginx-secrets
+    user: root
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      SERVICE: pollpear-nginx
+    healthcheck:
+      disable: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-nginx.hcl:/agent/agent.hcl:ro
+      - nginx-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - core-network
 
   ai:
     build:
@@ -92,3 +139,5 @@ volumes:
     name: pollpear-certbot-webroot
   front-dist:
     name: pollpear-front-dist
+  nginx-secrets:
+    name: pollpear-nginx-secrets

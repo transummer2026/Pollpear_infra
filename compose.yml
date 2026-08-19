@@ -14,7 +14,7 @@ services:
           target: /app/src
     container_name: pollpear-gateway
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-gateway.env
     volumes:
       - vault-approle:/vault/approle:ro
@@ -62,7 +62,7 @@ services:
           target: /app/Pollpear_shared/src
     container_name: pollpear-backend
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-backend.env
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
@@ -87,7 +87,8 @@ services:
       context: ./../Pollpear_frontend
       dockerfile: Dockerfile
     environment:
-      GATEWAY_URL: ${GATEWAY_URL}
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      APPROLE_ENV: pollpear-frontend.env
     healthcheck:
       test:
         [
@@ -132,7 +133,7 @@ services:
           target: /app/src
     container_name: pollpear-ai
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-ai.env
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
@@ -152,9 +153,20 @@ services:
     build:
       context: ./../Pollpear_cyber
       dockerfile: Dockerfile
+    image: pollpear-vault:dev
     container_name: pollpear-vault
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-root}
+      VAULT_ADDR: ${VAULT_ADDR:-http://127.0.0.1:8200}
     volumes:
       - vault-approle:/vault/approle
+      - vault-logs:/vault/logs
+      - ./../Pollpear_cyber/.env:/run/secrets/dotenv:ro
+    post_start:
+      - command:
+          - /bin/sh
+          - -c
+          - /usr/local/bin/seed.sh
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 30s
@@ -168,56 +180,126 @@ services:
       - backend-network
       - monitoring-network
 
+  postgres-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-postgres-secrets
+    user: root
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      SERVICE: pollpear-postgres
+    healthcheck:
+      disable: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-postgres.hcl:/agent/agent.hcl:ro
+      - postgres-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - backend-network
+
   postgres:
     image: ghcr.io/transummer2026/postgres:16-alpine
     container_name: pollpear-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-pollpear}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pollpear}
-      POSTGRES_DB: ${POSTGRES_DB:-pollpear}
+      POSTGRES_USER_FILE: /secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /secrets/postgres_password
+      POSTGRES_DB_FILE: /secrets/postgres_db
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres:/docker-entrypoint-initdb.d:ro
+      - postgres-secrets:/secrets:ro
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-pollpear} -d ${POSTGRES_DB:-pollpear}",
+          "pg_isready -U \"$$(cat /secrets/postgres_user)\" -d \"$$(cat /secrets/postgres_db)\"",
         ]
       interval: 30s
       timeout: 30s
       retries: 5
       start_period: 0s
       start_interval: 5s
+    depends_on:
+      postgres-secrets:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - core-network
       - backend-network
       - monitoring-network
 
+  redis-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-redis-secrets
+    user: root
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      SERVICE: pollpear-redis
+    healthcheck:
+      disable: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-redis.hcl:/agent/agent.hcl:ro
+      - redis-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - backend-network
+
   redis:
     image: ghcr.io/transummer2026/redis:7-alpine
     container_name: pollpear-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is not set in .env}
+    command: ["redis-server", "/secrets/redis.conf", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
       - ./redis:/redis-init:ro
+      - redis-secrets:/secrets:ro
     healthcheck:
       test:
         [
-          "CMD",
-          "redis-cli",
-          "--no-auth-warning",
-          "-a",
-          "${REDIS_PASSWORD:?REDIS_PASSWORD is not set in .env}",
-          "ping",
+          "CMD-SHELL",
+          "redis-cli --no-auth-warning -a \"$$(cat /secrets/password)\" ping | grep -q PONG",
         ]
       interval: 30s
       timeout: 30s
       retries: 5
       start_period: 0s
       start_interval: 5s
+    depends_on:
+      redis-secrets:
+        condition: service_completed_successfully
     restart: unless-stopped
+    networks:
+      - backend-network
+
+  garage-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-garage-secrets
+    user: root
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      SERVICE: pollpear-garage
+    healthcheck:
+      disable: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-garage.hcl:/agent/agent.hcl:ro
+      - garage-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
     networks:
       - backend-network
 
@@ -225,11 +307,12 @@ services:
     image: ghcr.io/transummer2026/garage:v2.3.0
     container_name: pollpear-garage
     environment:
-      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?GARAGE_RPC_SECRET is not set in .env}
-      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?GARAGE_ADMIN_TOKEN is not set in .env}
+      GARAGE_RPC_SECRET_FILE: /secrets/rpc_secret
+      GARAGE_ADMIN_TOKEN_FILE: /secrets/admin_token
     volumes:
       - garage-data:/var/lib/garage
       - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-secrets:/secrets:ro
     healthcheck:
       test: ["CMD", "/garage", "status"]
       interval: 30s
@@ -237,6 +320,9 @@ services:
       retries: 5
       start_period: 0s
       start_interval: 5s
+    depends_on:
+      garage-secrets:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - core-network
@@ -246,12 +332,20 @@ services:
 volumes:
   postgres-data:
     name: pollpear-postgres-data
+  postgres-secrets:
+    name: pollpear-postgres-secrets
   redis-data:
     name: pollpear-redis-data
+  redis-secrets:
+    name: pollpear-redis-secrets
+  garage-secrets:
+    name: pollpear-garage-secrets
   garage-data:
     name: pollpear-garage-data
   vault-approle:
     name: pollpear-vault-approle
+  vault-logs:
+    name: pollpear-vault-logs
 
 networks:
   core-network:

@@ -23,6 +23,14 @@ services:
       target: dev
     ports:
       - "5173:5173"
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
+    command: ["sh", "-c", "node scripts/vault-config.mjs && npm run dev"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-approle-entrypoint.sh:/usr/local/bin/vault-approle-entrypoint.sh:ro
+    depends_on:
+      vault:
+        condition: service_healthy
 
   ai:
     build:
@@ -64,7 +72,7 @@ services:
     container_name: pollpear-studio
     command: ["npx", "prisma", "studio", "--port", "5555", "--browser", "none"]
     environment:
-      VAULT_ADDR: http://vault:8200
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
       APPROLE_ENV: pollpear-backend.env
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     volumes:
@@ -88,62 +96,5 @@ services:
       - "3900:3900"
       - "3902:3902"
   vault:
-    build:
-      context: ./../Pollpear_cyber
-      dockerfile: Dockerfile
-    image: pollpear-vault:dev
-    environment:
-      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-root}
     ports:
       - "8200:8200"
-    volumes:
-      - vault-logs:/vault/logs
-    post_start:
-      - command:
-          - /bin/sh
-          - -c
-          - until vault status >/dev/null 2>&1; do sleep 1; done; vault audit list 2>/dev/null | grep -q 'file/' || vault audit enable file file_path=/vault/logs/audit.log
-        environment:
-          VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-root}
-      - command:
-          - /bin/sh
-          - -c
-          - /usr/local/bin/seed.sh
-        environment:
-          VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-root}
-          POSTGRES_USER: ${POSTGRES_USER:-pollpear}
-          POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pollpear}
-          POSTGRES_DB: ${POSTGRES_DB:-pollpear}
-          NESTJS_PEPPER: ${NESTJS_PEPPER:-}
-          OAUTH_42_CLIENT_ID: ${OAUTH_42_CLIENT_ID:-}
-          OAUTH_42_CLIENT_SECRET: ${OAUTH_42_CLIENT_SECRET:-}
-          OAUTH_42_REDIRECT_URI: ${OAUTH_42_REDIRECT_URI:-}
-          OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
-          OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
-          OAUTH_GOOGLE_REDIRECT_URI: ${OAUTH_GOOGLE_REDIRECT_URI:-}
-          OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID:-}
-          OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET:-}
-          OAUTH_GITHUB_REDIRECT_URI: ${OAUTH_GITHUB_REDIRECT_URI:-}
-          MAIL_HOST: ${MAIL_HOST:-}
-          MAIL_PORT: ${MAIL_PORT:-}
-          MAIL_USER: ${MAIL_USER:-}
-          MAIL_PASS: ${MAIL_PASS:-}
-          MAIL_FROM: ${MAIL_FROM:-}
-          FRONTEND_URL: ${FRONTEND_URL:-}
-          GARAGE_S3_ENDPOINT: ${GARAGE_S3_ENDPOINT:-}
-          GARAGE_S3_URL: ${GARAGE_S3_URL:-}
-          GARAGE_S3_UPLOADS_HOST: ${GARAGE_S3_UPLOADS_HOST:-}
-          GARAGE_S3_REGION: ${GARAGE_S3_REGION:-}
-          GARAGE_S3_BUCKET: ${GARAGE_S3_BUCKET:-}
-          GARAGE_S3_ACCESS_KEY: ${GARAGE_S3_ACCESS_KEY:-}
-          GARAGE_S3_SECRET_KEY: ${GARAGE_S3_SECRET_KEY:-}
-          # GRAFANA_USER/GRAFANA_PASSWORD: seed.sh n'écrit plus secret/pollpear/grafana
-          # GRAFANA_USER: ${GRAFANA_USER:-}
-          # GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-}
-          REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-          BACKEND_URL: ${BACKEND_URL:-}
-          GATEWAY_URL: ${GATEWAY_URL:-}
-
-volumes:
-  vault-logs:
-    name: pollpear-vault-logs

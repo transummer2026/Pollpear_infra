@@ -4,10 +4,6 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 export DOMAIN="${DOMAIN:-fclean.local}"
-export NGINX_AUTH="${NGINX_AUTH:-off}"
-export GATEWAY_URL="${GATEWAY_URL:-http://fclean.local}"
-export GRAFANA_USER="${GRAFANA_USER:-fclean}"
-export GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-fclean}"
 
 flags=()
 if [[ -f .env ]]; then

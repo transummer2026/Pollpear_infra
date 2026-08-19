@@ -25,17 +25,40 @@ services:
       - backend-network
       - monitoring-network
 
+  grafana-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-grafana-secrets
+    user: root
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      SERVICE: pollpear-grafana
+    healthcheck:
+      disable: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-grafana.hcl:/agent/agent.hcl:ro
+      - grafana-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - monitoring-network
+
   grafana:
     image: ghcr.io/transummer2026/grafana:latest
     container_name: pollpear-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER__FILE: /secrets/admin_user
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /secrets/admin_password
+      GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:?GRAFANA_USER is not set in .env}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is not set in .env}
-      GF_USERS_ALLOW_SIGN_UP: "false"
+      - grafana-secrets:/secrets:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
@@ -43,6 +66,9 @@ services:
       retries: 5
       start_period: 0s
       start_interval: 5s
+    depends_on:
+      grafana-secrets:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - monitoring-network
@@ -87,14 +113,42 @@ services:
     networks:
       - monitoring-network
 
+  postgres-exporter-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-postgres-exporter-secrets
+    user: root
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      SERVICE: pollpear-postgres-exporter
+    healthcheck:
+      disable: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-postgres-exporter.hcl:/agent/agent.hcl:ro
+      - postgres-exporter-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - monitoring-network
+
   postgres-exporter:
     image: ghcr.io/transummer2026/postgres-exporter:latest
     container_name: pollpear-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-pollpear}:${POSTGRES_PASSWORD:-pollpear}@postgres:5432/${POSTGRES_DB:-pollpear}?sslmode=disable
+      DATA_SOURCE_URI_FILE: /secrets/pg_uri
+      DATA_SOURCE_USER_FILE: /secrets/pg_user
+      DATA_SOURCE_PASS_FILE: /secrets/pg_pass
+    volumes:
+      - postgres-exporter-secrets:/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-exporter-secrets:
+        condition: service_completed_successfully
     # sonde sur / (liveness HTTP) et non /metrics : évite une salve de requêtes DB toutes les 10s
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9187/"]
@@ -125,15 +179,42 @@ services:
     networks:
       - monitoring-network
 
+  redis-exporter-secrets:
+    image: pollpear-vault:dev
+    container_name: pollpear-redis-exporter-secrets
+    user: root
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      SERVICE: pollpear-redis-exporter
+    healthcheck:
+      disable: true
+    entrypoint: ["/bin/sh", "/usr/local/bin/vault-agent-entrypoint.sh"]
+    volumes:
+      - vault-approle:/vault/approle:ro
+      - ./scripts/vault-agent-entrypoint.sh:/usr/local/bin/vault-agent-entrypoint.sh:ro
+      - ./vault-agent/agent-redis-exporter.hcl:/agent/agent.hcl:ro
+      - redis-exporter-secrets:/secrets
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - monitoring-network
+
   # pas de healthcheck : image scratch (aucun shell/wget pour sonder /metrics)
   redis-exporter:
     image: ghcr.io/transummer2026/redis-exporter:latest
     container_name: pollpear-redis-exporter
     environment:
       REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD_FILE: /secrets/redis-password
+    volumes:
+      - redis-exporter-secrets:/secrets:ro
     depends_on:
       redis:
         condition: service_healthy
+      redis-exporter-secrets:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - backend-network
@@ -144,6 +225,12 @@ volumes:
     name: pollpear-prometheus-data
   grafana-data:
     name: pollpear-grafana-data
+  grafana-secrets:
+    name: pollpear-grafana-secrets
+  redis-exporter-secrets:
+    name: pollpear-redis-exporter-secrets
+  postgres-exporter-secrets:
+    name: pollpear-postgres-exporter-secrets
   alertmanager-data:
     name: pollpear-alertmanager-data
 
