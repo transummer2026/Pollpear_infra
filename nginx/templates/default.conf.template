@@ -74,9 +74,18 @@ server {
         proxy_send_timeout 300s;
     }
 
-    # TODO: gateway:8080 quand la gateway sera branchée
+    location /api/ {
+        set $gateway_upstream http://gateway:8080;
+        proxy_pass $gateway_upstream;
+    }
+
+    location = /config.json {
+        modsecurity_rules 'SecRuleRemoveById 930130';
+        root /usr/share/nginx/html;
+    }
+
     location / {
-        set $app_upstream http://frontend:80;
-        proxy_pass $app_upstream;
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /index.html;
     }
 }
