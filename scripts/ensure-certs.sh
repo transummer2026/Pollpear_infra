@@ -33,9 +33,10 @@ live="/etc/letsencrypt/live/${DOMAIN}"
 self_signed() {
   compose run --rm --entrypoint sh certbot -c "
     mkdir -p ${live} &&
-    openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+    openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
       -keyout ${live}/privkey.pem -out ${live}/fullchain.pem \
-      -subj '/CN=${DOMAIN}'"
+      -subj '/CN=${DOMAIN}' \
+      -addext 'subjectAltName=DNS:${DOMAIN},DNS:localhost,IP:127.0.0.1'"
 }
 
 if compose run --rm --entrypoint sh certbot -c \
@@ -48,6 +49,7 @@ fi
 echo "→ cert auto-signé (pour démarrer nginx)…"
 self_signed
 echo "→ démarrage de nginx (sert le challenge ACME)…"
+compose up -d nginx-secrets
 compose up -d --no-deps nginx
 
 echo "→ tentative Let's Encrypt pour ${DOMAIN}…"
