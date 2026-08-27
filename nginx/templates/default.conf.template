@@ -67,29 +67,6 @@ server {
         return 301 /grafana/;
     }
 
-    location /doc/ {
-        alias /srv/;
-        autoindex on;
-    }
-    location = /doc {
-        return 301 /doc/;
-    }
-
-    # La gateway strippe le prefixe et pose le Host vhost de Garage.
-    location /api/uploads/ {
-        auth_basic off;
-        set $gateway_upstream http://gateway:8080;
-        proxy_pass $gateway_upstream;
-    }
-
-
-    location /api/ws {
-        set $ws_upstream http://gateway:8080;
-        proxy_pass $ws_upstream;
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
-    }
-
     location /api/ {
         set $gateway_upstream http://gateway:8080;
         proxy_pass $gateway_upstream;

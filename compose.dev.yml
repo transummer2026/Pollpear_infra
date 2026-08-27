@@ -2,6 +2,7 @@ services:
   gateway:
     build:
       target: dev
+    image: pollpear-gateway:dev
     ports:
       - "8080:8080"
     healthcheck:
@@ -14,6 +15,7 @@ services:
   backend:
     build:
       target: dev
+    image: pollpear-backend:dev
     command: ["npm", "run", "start:dev"]
     ports:
       - "3000:3000"
@@ -21,6 +23,7 @@ services:
   frontend:
     build:
       target: dev
+    image: pollpear-frontend:dev
     ports:
       - "5173:5173"
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
@@ -35,6 +38,7 @@ services:
   ai:
     build:
       target: dev
+    image: pollpear-ai:dev
     command:
       [
         "uvicorn",
