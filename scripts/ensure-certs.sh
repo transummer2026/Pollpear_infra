@@ -49,6 +49,7 @@ fi
 echo "→ cert auto-signé (pour démarrer nginx)…"
 self_signed
 echo "→ démarrage de nginx (sert le challenge ACME)…"
+compose up -d nginx-secrets
 compose up -d --no-deps nginx
 
 echo "→ tentative Let's Encrypt pour ${DOMAIN}…"
