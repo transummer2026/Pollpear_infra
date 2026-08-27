@@ -38,11 +38,7 @@ echo "env delivered from $DEPLOY_ENV_FILE and $DEPLOY_VAULT_ENV_FILE"
 echo "building internal services"
 compose build
 
-echo "starting postgres"
-compose up -d --wait postgres
-
-echo "running prisma migrations"
-compose run --rm --no-deps backend npx prisma migrate deploy --config prisma.config.ts
+bash Pollpear_infra/scripts/migrate.sh
 
 echo "ensuring TLS certificate"
 bash Pollpear_infra/scripts/ensure-certs.sh
