@@ -45,6 +45,14 @@ server {
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
+    modsecurity_rules '
+        SecRuleUpdateTargetById 942100 "!ARGS:json.password|!ARGS:json.oldPassword"
+        SecRuleUpdateTargetById 942100 "!ARGS:json.username|!ARGS:json.name|!ARGS:json.surname|!ARGS:json.bio"
+        SecRuleUpdateTargetById 942100 "!ARGS:json.city|!ARGS:json.state|!ARGS:json.country|!ARGS:json.company"
+        SecRuleUpdateTargetById 942100 "!ARGS:json.title|!ARGS:json.description|!ARGS:json.freeField|!ARGS:q"
+        SecRuleUpdateTargetById 942100 "!ARGS:/^json.options.array_[0-9]+.content$/"
+    ';
+
     resolver 127.0.0.11 valid=10s ipv6=off;
 
     include /secrets/auth.conf;
