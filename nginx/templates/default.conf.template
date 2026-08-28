@@ -49,7 +49,7 @@ server {
         SecRuleUpdateTargetById 942100 "!ARGS:json.password|!ARGS:json.oldPassword"
         SecRuleUpdateTargetById 942100 "!ARGS:json.username|!ARGS:json.name|!ARGS:json.surname|!ARGS:json.bio"
         SecRuleUpdateTargetById 942100 "!ARGS:json.city|!ARGS:json.state|!ARGS:json.country|!ARGS:json.company"
-        SecRuleUpdateTargetById 942100 "!ARGS:json.title|!ARGS:json.description|!ARGS:json.freeField|!ARGS:q"
+        SecRuleUpdateTargetById 942100 "!ARGS:json.title|!ARGS:json.description|!ARGS:json.freeField"
         SecRuleUpdateTargetById 942100 "!ARGS:/^json.options.array_[0-9]+.content$/"
     ';
 
