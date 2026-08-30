@@ -52,6 +52,11 @@ echo "→ démarrage de nginx (sert le challenge ACME)…"
 compose up -d nginx-secrets
 compose up -d --no-deps nginx
 
+if [[ "${SKIP_LETSENCRYPT:-0}" == "1" ]]; then
+  compose exec nginx nginx -s reload
+  exit 0
+fi
+
 echo "→ tentative Let's Encrypt pour ${DOMAIN}…"
 if compose run --rm --entrypoint sh certbot -c "
     rm -rf /etc/letsencrypt/live/${DOMAIN} \
