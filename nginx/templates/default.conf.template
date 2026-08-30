@@ -7,6 +7,8 @@ server {
     listen 8080;
     server_name ${DOMAIN};
 
+    server_tokens off;
+
     # healthcheck docker, sans TLS ni auth
     location = /healthz {
         return 200 "ok\n";
@@ -46,11 +48,11 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     modsecurity_rules '
-        SecRuleUpdateTargetById 942100 "!ARGS:json.password|!ARGS:json.oldPassword"
-        SecRuleUpdateTargetById 942100 "!ARGS:json.username|!ARGS:json.name|!ARGS:json.surname|!ARGS:json.bio"
-        SecRuleUpdateTargetById 942100 "!ARGS:json.city|!ARGS:json.state|!ARGS:json.country|!ARGS:json.company"
-        SecRuleUpdateTargetById 942100 "!ARGS:json.title|!ARGS:json.description|!ARGS:json.freeField"
-        SecRuleUpdateTargetById 942100 "!ARGS:/^json.options.array_[0-9]+.content$/"
+        SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:json.password|!ARGS:json.oldPassword"
+        SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:json.username|!ARGS:json.name|!ARGS:json.surname|!ARGS:json.bio"
+        SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:json.city|!ARGS:json.state|!ARGS:json.country|!ARGS:json.company"
+        SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:json.title|!ARGS:json.description|!ARGS:json.freeField"
+        SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:/^json[.]options[.]array_[0-9]+[.]content$/"
     ';
 
     resolver 127.0.0.11 valid=10s ipv6=off;
