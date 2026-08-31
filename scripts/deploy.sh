@@ -32,7 +32,7 @@ if [[ ! -f "$DEPLOY_VAULT_ENV_FILE" ]]; then
   exit 1
 fi
 install -m 600 "$DEPLOY_ENV_FILE" .env
-install -m 600 "$DEPLOY_VAULT_ENV_FILE" Pollpear_cyber/.env
+install -m 644 "$DEPLOY_VAULT_ENV_FILE" Pollpear_cyber/.env
 echo "env delivered from $DEPLOY_ENV_FILE and $DEPLOY_VAULT_ENV_FILE"
 
 echo "building internal services"
