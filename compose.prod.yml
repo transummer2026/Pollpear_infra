@@ -9,6 +9,7 @@ services:
       - "${NGINX_HTTPS_PORT:-443}:8443"
     environment:
       DOMAIN: ${DOMAIN:?DOMAIN is not set in .env}
+      NGINX_HTTPS_PORT: ${NGINX_HTTPS_PORT:-443}
     entrypoint: ["/bin/sh", "/usr/local/bin/waf-env-entrypoint.sh"]
     command: ["nginx", "-g", "daemon off;"]
     volumes:
