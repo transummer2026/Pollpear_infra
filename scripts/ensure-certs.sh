@@ -53,7 +53,6 @@ compose up -d nginx-secrets
 compose up -d --no-deps nginx
 
 if [[ "${SKIP_LETSENCRYPT:-0}" == "1" ]]; then
-  compose exec nginx nginx -s reload
   exit 0
 fi
 
