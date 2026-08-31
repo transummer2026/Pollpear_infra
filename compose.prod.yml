@@ -137,11 +137,6 @@ services:
       start_period: 0s
       start_interval: 5s
 
-  grafana:
-    environment:
-      GF_SERVER_ROOT_URL: https://${DOMAIN}/grafana/
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-
 volumes:
   certbot-certs:
     name: pollpear-certbot-certs
