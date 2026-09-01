@@ -1,37 +1,36 @@
 
 metadata_dir = "/var/lib/garage/meta"
 data_dir = "/var/lib/garage/data"
-# lmdb is the default, a db key=value,
-# we can switch to sqlite (more slowly) or 
-# fjall (experimental and advise against in the doc)
+# lmdb is the default key/value DB engine; sqlite (slower) or fjall (experimental,
+# discouraged by the docs) are the alternatives.
 db_engine = "lmdb"
 
-# cluster not for us, need k8s or aws/azure
+# Single-node deployment: no replication (a real cluster would need k8s or a cloud).
 replication_factor = 1
 
-# port for internal noeuds (need it in mono-node to)
+# RPC port for inter-node traffic (still required even in single-node mode).
 rpc_bind_addr = "[::]:3901"
 rpc_public_addr = "127.0.0.1:3901"
-# do not uncomment this is in the .env
+# Do not set here: injected at runtime via GARAGE_RPC_SECRET_FILE (rendered by Vault).
 # rpc_secret = "$(openssl rand -hex 32)"
 
-# port for the communication whith backend
+# S3 API port used by the backend.
 [s3_api]
 s3_region = "garage"
 api_bind_addr = "[::]:3900"
 root_domain = ".s3.garage.localhost"
 
-# port for the communication with frontend
+# S3 website port used by the frontend.
 [s3_web]
 bind_addr = "[::]:3902"
 root_domain = ".web.garage.localhost"
 index = "index.html"
 
-# port for the admin ( /health and /metrics)
+# Admin port, serving /health and /metrics.
 [admin]
 api_bind_addr = "[::]:3903"
-# do not uncomment this is in the .env
+# Do not set here: injected at runtime via GARAGE_ADMIN_TOKEN_FILE (rendered by Vault).
 # admin_token = "$(openssl rand -base64 32)"
 
-# metrics in public because acces in 3903 not exposed
+# Metrics left unauthenticated because the admin port (3903) is not publicly exposed.
 # metrics_token = "$(openssl rand -base64 32)"

@@ -1,8 +1,11 @@
 # Doc: https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
 
 groups:
+  # Availability alerts.
   - name: disponibilite
     rules:
+      # Any scrape target down for 2m. App services (backend/frontend/gateway/ai)
+      # are excluded here — they are covered separately / not yet exposing /metrics.
       - alert: ServiceDown
         expr: up{job!~"backend|frontend|gateway|ai"} == 0
         for: 2m
@@ -12,6 +15,7 @@ groups:
           summary: "{{ $labels.job }} est down"
           description: "La target {{ $labels.instance }} (job {{ $labels.job }}) ne répond plus au scrape depuis 2 minutes."
 
+      # Vault reachable but sealed: no service can read its secrets, unseal ASAP.
       - alert: VaultSealed
         expr: max(vault_core_unsealed) == 0
         for: 1m
@@ -21,8 +25,10 @@ groups:
           summary: "Vault est SEALED"
           description: "Vault répond mais est scellé : aucun service ne peut récupérer ses secrets. Désceller au plus vite."
 
+  # Host machine resource alerts.
   - name: machine-hote
     rules:
+      # Root filesystem over 85% full for 5m (writes will eventually fail).
       - alert: HostDiskAlmostFull
         expr: 100 * (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) > 85
         for: 5m
@@ -32,6 +38,7 @@ groups:
           summary: 'Disque presque plein ({{ $value | printf "%.0f" }}%)'
           description: "Le disque racine dépasse 85% d'utilisation. Prometheus, Postgres et les logs vont finir par échouer en écriture."
 
+      # Host memory usage over 90% for 10m.
       - alert: HostHighMemory
         expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 90
         for: 10m
@@ -41,6 +48,7 @@ groups:
           summary: "RAM > 90% depuis 10 min"
           description: "Mémoire hôte saturée. Voir la row Conteneurs du dashboard overview pour identifier le consommateur."
 
+      # Host CPU (non-idle) sustained over 90% for 10m.
       - alert: HostHighCPU
         expr: 100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 90
         for: 10m
@@ -50,8 +58,10 @@ groups:
           summary: "CPU > 90% depuis 10 min"
           description: "CPU hôte saturé de façon soutenue — latence en vue sur tous les services."
 
+  # Database alerts.
   - name: bases-de-donnees
     rules:
+      # Postgres connection pool over 80% of max_connections for 5m (leak warning).
       - alert: PostgresConnexionsHigh
         expr: sum(pg_stat_activity_count) / pg_settings_max_connections > 0.8
         for: 5m
@@ -61,8 +71,11 @@ groups:
           summary: "Connexions Postgres > 80% du max"
           description: '{{ $value | printf "%.0f" }}% du pool utilisé. Vérifier les fuites de connexions côté backend avant saturation.'
 
+  # Self-monitoring of the Prometheus TSDB.
   - name: monitoring
     rules:
+      # TSDB series count blew past 100k for 15m — likely an unbounded label
+      # (raw ID/path) was introduced.
       - alert: TooManySeries
         expr: prometheus_tsdb_head_series > 100000
         for: 15m

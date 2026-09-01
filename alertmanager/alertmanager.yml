@@ -1,5 +1,7 @@
 # Doc: https://prometheus.io/docs/alerting/latest/configuration/
 
+# Single route: batch alerts by name and send them all to Discord. Wait 30s to
+# group a new alert, 5m between updates of a group, re-notify every 4h if still firing.
 route:
   receiver: discord
   group_by: [alertname]
@@ -7,12 +9,15 @@ route:
   group_interval: 5m
   repeat_interval: 4h
 
+# Discord webhook; the URL is read from a mounted secret file, not inlined here.
 receivers:
   - name: discord
     discord_configs:
       - webhook_url_file: /etc/alertmanager/secrets/discord_webhook
         title: "[{{ .Status | toUpper }}] {{ .CommonAnnotations.summary }}"
 
+# When a critical alert fires, mute the matching warning for the same job to avoid
+# double notifications.
 inhibit_rules:
   - source_matchers: [severity="critical"]
     target_matchers: [severity="warning"]

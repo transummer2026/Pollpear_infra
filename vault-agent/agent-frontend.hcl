@@ -1,3 +1,6 @@
+# Vault agent for the frontend build side-car (frontend-secrets). Authenticates via
+# AppRole and renders the runtime config.json (gateway URL) into the front-dist
+# volume that nginx serves. Runs once and exits.
 vault {
   address = "http://vault:8200"
 }

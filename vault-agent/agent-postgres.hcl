@@ -1,3 +1,6 @@
+# Vault agent for the postgres-secrets side-car. From secret/pollpear/db it renders
+# the Postgres superuser, password, and database name into the shared secrets volume
+# (read via POSTGRES_*_FILE at init). Runs once and exits.
 vault {
   address = "http://vault:8200"
 }

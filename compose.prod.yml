@@ -1,5 +1,10 @@
+# Prod overlay: adds the public edge (nginx + ModSecurity WAF, certbot), switches
+# every service to its `prod` build target, and has the frontend emit static assets
+# instead of running a dev server. Layered on top of compose.yml + compose.monitor.yml.
 services:
 
+  # nginx with the ModSecurity WAF: TLS termination and the only public entry point.
+  # Host 80/443 map to the container's unprivileged 8080/8443 (see the vhost template).
   nginx:
     image: ghcr.io/transummer2026/modsecurity:latest
     container_name: pollpear-nginx
@@ -10,6 +15,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:?DOMAIN is not set in .env}
       NGINX_HTTPS_PORT: ${NGINX_HTTPS_PORT:-443}
+    # Load the WAF tuning env (from nginx-secrets) before launching nginx.
     entrypoint: ["/bin/sh", "/usr/local/bin/waf-env-entrypoint.sh"]
     command: ["nginx", "-g", "daemon off;"]
     volumes:
@@ -21,6 +27,8 @@ services:
       - nginx-secrets:/secrets:ro
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-webroot:/var/www/certbot:ro
+    # Wait until the static build is in front-dist, config.json is rendered, and
+    # the auth/WAF secrets exist before nginx starts serving.
     depends_on:
       frontend:
         condition: service_completed_successfully
@@ -40,6 +48,8 @@ services:
       - core-network
       - monitoring-network
 
+  # Certbot side-car: long-running renewal loop (renew-loop.sh) that shares the cert
+  # and webroot volumes with nginx. Initial issuance is done by ensure-certs.sh.
   certbot:
     image: ghcr.io/transummer2026/certbot:latest
     container_name: pollpear-certbot
@@ -68,6 +78,8 @@ services:
     image: pollpear-backend:prod
     command: ["node", "dist/src/main"]
 
+  # In prod the frontend is a build job, not a server: it compiles static assets
+  # into the front-dist volume (mounted at /out) and exits, so nginx can serve them.
   frontend:
     build:
       target: prod
@@ -78,6 +90,8 @@ services:
     volumes:
       - front-dist:/out
 
+  # Secrets side-car: renders config.json (gateway URL) into front-dist. Runs after
+  # the frontend build so it does not race the assets it sits next to.
   frontend-secrets:
     image: pollpear-vault:dev
     container_name: pollpear-frontend-secrets
@@ -102,6 +116,8 @@ services:
     networks:
       - core-network
 
+  # Secrets side-car: renders the basic-auth (htpasswd, auth.conf) and WAF env files
+  # nginx consumes.
   nginx-secrets:
     image: pollpear-vault:dev
     container_name: pollpear-nginx-secrets

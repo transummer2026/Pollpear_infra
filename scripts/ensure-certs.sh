@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Garantit un certificat TLS pour $DOMAIN avant le up prod. Idempotent, appelé
-# par `make up_prod` :
-#   - cert Let's Encrypt déjà valide      -> ne fait rien (le renew-loop gère la suite)
-#   - sinon                               -> cert auto-signé (pour que nginx démarre),
-#                                            puis tentative Let's Encrypt en best-effort
-# La tentative LE est non bloquante : si elle échoue (pas de DNS public, rate limit,
-# challenge KO), on retombe sur l'auto-signé pour que nginx ne reste jamais sans cert
-# et que le up local passe quand même.
+# Guarantees a TLS certificate for $DOMAIN before the prod up. Idempotent, called
+# by `make up_prod`:
+#   - Let's Encrypt cert already valid  -> do nothing (the renew-loop takes over)
+#   - otherwise                         -> self-signed cert (so nginx can start),
+#                                          then a best-effort Let's Encrypt attempt
+# The LE attempt is non-blocking: if it fails (no public DNS, rate limit, failed
+# challenge) we fall back to the self-signed cert so nginx is never left without a
+# certificate and the local up still succeeds.
 
 cd "$(dirname "$0")/../.."
 
@@ -39,6 +39,8 @@ self_signed() {
       -addext 'subjectAltName=DNS:${DOMAIN},DNS:localhost,IP:127.0.0.1'"
 }
 
+# Skip everything if the live cert was issued by Let's Encrypt (issuer contains
+# "encrypt"); a missing file or a self-signed cert falls through to reissue below.
 if compose run --rm --entrypoint sh certbot -c \
     "openssl x509 -in ${live}/fullchain.pem -noout -issuer 2>/dev/null" \
     | grep -qi "encrypt"; then
@@ -52,11 +54,14 @@ echo "→ démarrage de nginx (sert le challenge ACME)…"
 compose up -d nginx-secrets
 compose up -d --no-deps nginx
 
+# Escape hatch: stop at the self-signed cert (local runs, offline CI, no public DNS).
 if [[ "${SKIP_LETSENCRYPT:-0}" == "1" ]]; then
   exit 0
 fi
 
 echo "→ tentative Let's Encrypt pour ${DOMAIN}…"
+# Drop any stale LE state (leftover self-signed live dir / renewal conf) so certbot
+# issues cleanly via the webroot challenge that nginx is now serving.
 if compose run --rm --entrypoint sh certbot -c "
     rm -rf /etc/letsencrypt/live/${DOMAIN} \
            /etc/letsencrypt/archive/${DOMAIN} \

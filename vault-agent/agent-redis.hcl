@@ -1,3 +1,6 @@
+# Vault agent for the redis-secrets side-car. From secret/pollpear/redis it renders
+# redis.conf (requirepass line loaded by redis-server) and a bare password file used
+# by the healthcheck. Runs once and exits.
 vault {
   address = "http://vault:8200"
 }
