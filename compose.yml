@@ -1,6 +1,8 @@
 name: pollpear
 services:
-  # SERVICES POLLPEAR
+  # Pollpear application services (built from sibling repos in the super-repo).
+  # Rust edge gateway: single entry point behind nginx, fronts the backend and
+  # holds the WebSocket connections. Reads its own secrets from Vault via AppRole.
   gateway:
     build:
       context: ./../Pollpear_gateway
@@ -33,6 +35,8 @@ services:
       - core-network
       - backend-network
 
+  # NestJS backend (REST + Prisma/Postgres). Entrypoint sources its Vault AppRole
+  # before starting so the app can pull DATABASE_URL and friends from Vault.
   backend:
     build:
       context: ./../Pollpear_backend
@@ -82,6 +86,8 @@ services:
       - core-network
       - backend-network
 
+  # Frontend (Vite/React). In dev it runs the dev server; in prod (compose.prod.yml)
+  # it builds static assets into the front-dist volume that nginx serves.
   frontend:
     build:
       context: ./../Pollpear_frontend
@@ -120,6 +126,8 @@ services:
     networks:
       - core-network
 
+  # Python/FastAPI AI service, reachable only on the internal backend-network
+  # (via the gateway), not exposed through nginx.
   ai:
     build:
       context: ./../Pollpear_ai
@@ -148,7 +156,10 @@ services:
     networks:
       - backend-network
 
-  # Services infra
+  # Infrastructure services
+  # HashiCorp Vault (dev mode). Source of truth for every secret; the post_start
+  # hook seeds the KV store from Pollpear_cyber/.env and writes each service's
+  # AppRole credentials onto the shared vault-approle volume.
   vault:
     build:
       context: ./../Pollpear_cyber
@@ -161,7 +172,10 @@ services:
     volumes:
       - vault-approle:/vault/approle
       - vault-logs:/vault/logs
+      # Secret material to seed into Vault, mounted read-only from Pollpear_cyber.
       - ./../Pollpear_cyber/.env:/run/secrets/dotenv:ro
+    # Runs after the container starts (Vault is up): populate KV secrets and emit
+    # the per-service AppRole files the side-cars and app entrypoints wait on.
     post_start:
       - command:
           - /bin/sh
@@ -180,6 +194,11 @@ services:
       - backend-network
       - monitoring-network
 
+  # Secrets side-car pattern (repeated per service): a short-lived Vault agent that
+  # authenticates with the service's AppRole, renders secret files into a dedicated
+  # <service>-secrets volume, then exits. The real service depends on it with
+  # `service_completed_successfully` so it only starts once its secrets exist.
+  # $SERVICE selects which AppRole/agent config to use.
   postgres-secrets:
     image: pollpear-vault:dev
     container_name: pollpear-postgres-secrets
@@ -205,12 +224,14 @@ services:
   postgres:
     image: ghcr.io/transummer2026/postgres:16-alpine
     container_name: pollpear-postgres
+    # Credentials read from files rendered by postgres-secrets (never inline in env).
     environment:
       POSTGRES_USER_FILE: /secrets/postgres_user
       POSTGRES_PASSWORD_FILE: /secrets/postgres_password
       POSTGRES_DB_FILE: /secrets/postgres_db
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      # SQL run once on an empty data dir to bootstrap the database.
       - ./postgres:/docker-entrypoint-initdb.d:ro
       - postgres-secrets:/secrets:ro
     healthcheck:
@@ -258,6 +279,7 @@ services:
   redis:
     image: ghcr.io/transummer2026/redis:7-alpine
     container_name: pollpear-redis
+    # redis.conf (with requirepass) is rendered by redis-secrets; AOF persistence on.
     command: ["redis-server", "/secrets/redis.conf", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
@@ -303,6 +325,8 @@ services:
     networks:
       - backend-network
 
+  # Garage: self-hosted S3-compatible object store (avatars, uploads). Provisioned
+  # by scripts/garage-init.sh once healthy. Secrets rendered by garage-secrets.
   garage:
     image: ghcr.io/transummer2026/garage:v2.3.0
     container_name: pollpear-garage
@@ -348,12 +372,15 @@ volumes:
     name: pollpear-vault-logs
 
 networks:
+  # Edge/user-facing path: nginx, frontend, gateway.
   core-network:
     driver: bridge
     name: core-network
+  # Internal service mesh: backend, datastores, AI, gateway.
   backend-network:
     driver: bridge
     name: backend-network
+  # Prometheus scraping and exporters, kept off the app networks where possible.
   monitoring-network:
     driver: bridge
     name: monitoring-network

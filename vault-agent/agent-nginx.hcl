@@ -1,3 +1,7 @@
+# Vault agent for the nginx-secrets side-car. From secret/pollpear/nginx it renders
+# the htpasswd file and auth.conf (basic-auth realm, or "auth_basic off"); from
+# secret/pollpear/waf it renders waf.env (ModSecurity/CRS tuning sourced by the
+# nginx entrypoint). Runs once and exits.
 vault {
   address = "http://vault:8200"
 }
@@ -18,6 +22,8 @@ template {
   contents    = "{{- with secret \"secret/data/pollpear/nginx\" -}}{{ .Data.data.htpasswd }}{{- end -}}"
 }
 
+# Emit "auth_basic off;" when the secret's auth field is "off", otherwise a realm
+# plus the htpasswd file rendered above.
 template {
   destination = "/secrets/auth.conf"
   perms       = "0644"
@@ -33,6 +39,7 @@ auth_basic_user_file /secrets/htpasswd;
 EOT
 }
 
+# Flatten every key under secret/pollpear/waf into KEY="value" env lines.
 template {
   destination = "/secrets/waf.env"
   perms       = "0600"

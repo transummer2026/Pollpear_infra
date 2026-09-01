@@ -1,3 +1,6 @@
+# Vault agent for the grafana-secrets side-car. Renders Grafana's admin user and
+# password from secret/pollpear/grafana into the shared secrets volume (read via
+# GF_SECURITY_ADMIN_*__FILE). Runs once and exits.
 vault {
   address = "http://vault:8200"
 }

@@ -1,3 +1,5 @@
+# Default Prometheus datasource, provisioned (non-editable) so it matches the
+# dashboards' fixed "prometheus" uid. `access: proxy` = Grafana queries it server-side.
 apiVersion: 1
 
 datasources:

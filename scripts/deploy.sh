@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Deploiement CD dev.pollpear.com : rejoue l'equivalent de `make up_prod` depuis le
-# runner self-hosted, precede des migrations Prisma. Idempotent, pilote par le
-# workflow deploy_staging.yml (ou `make deploy` en manuel sur le serveur).
-#   1. livre les .env persistants du serveur : structurel a la racine du
-#      super-repo, secrets vault dans Pollpear_cyber/.env
-#   2. build des services internes depuis le code epingle par staging
-#   3. postgres up + healthy, puis migrations Prisma en one-off
-#   4. certs (ensure-certs.sh) puis up complet en --wait (valide les healthchecks)
-#   5. purge des images orphelines
+# CD deployment for dev.pollpear.com: replays the equivalent of `make up_prod`
+# from the self-hosted runner, preceded by the Prisma migrations. Idempotent,
+# driven by the deploy_staging.yml workflow (or `make deploy` by hand on the server).
+#   1. deliver the server's persistent .env files: structural one at the super-repo
+#      root, Vault secrets in Pollpear_cyber/.env
+#   2. build the internal services from the code pinned by staging
+#   3. bring postgres up + healthy, then run the Prisma migrations as a one-off
+#   4. certs (ensure-certs.sh), then full up with --wait (validates the healthchecks)
+#   5. prune orphaned images
 
 cd "$(dirname "$0")/../.."
 

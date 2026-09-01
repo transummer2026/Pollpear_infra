@@ -1,35 +1,46 @@
+# Map the Upgrade header to a Connection value so WebSocket upgrades proxy through
+# (send "upgrade" when the client asked for it, "close" otherwise).
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
 }
 
+# Shared rate-limit bucket keyed on client IP, used by the auth routes below.
 limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=20r/m;
 
+# Plain HTTP vhost: only serves the healthcheck and the ACME challenge; everything
+# else is redirected to HTTPS.
 server {
     listen 8080;
     server_name ${DOMAIN};
 
     server_tokens off;
 
-    # healthcheck docker, sans TLS ni auth
+    # Docker healthcheck endpoint, no TLS and no auth.
     location = /healthz {
         return 200 "ok\n";
     }
 
+    # Let's Encrypt HTTP-01 challenge webroot (shared with the certbot side-car).
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
 
+    # Force every other request onto HTTPS.
     location / {
         return 301 https://$host:${NGINX_HTTPS_PORT}$request_uri;
     }
 }
 
+# Main TLS vhost: terminates HTTPS, applies security headers and the WAF, then
+# reverse-proxies to the internal services.
 server {
     listen 8443 ssl;
     http2 on;
     server_name ${DOMAIN};
 
+    # Cert path is the same whether it was issued by Let's Encrypt or self-signed
+    # (see scripts/ensure-certs.sh).
     ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
 
@@ -44,11 +55,16 @@ server {
     server_tokens off;
     client_max_body_size 13m;
 
+    # Baseline security headers: force HTTPS for a year, block MIME sniffing,
+    # framing, and referrer leakage across origins.
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
+    # ModSecurity/CRS tuning: exempt fields that legitimately carry SQL-like text
+    # (passwords, free-text profile and poll fields) from the SQLi rule tag to kill
+    # false positives, without disabling the rules for other arguments.
     modsecurity_rules '
         SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:json.password|!ARGS:json.oldPassword"
         SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:json.username|!ARGS:json.name|!ARGS:json.surname|!ARGS:json.bio"
@@ -57,28 +73,39 @@ server {
         SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:/^json[.]options[.]array_[0-9]+[.]content$/"
     ';
 
+    # Use Docker's embedded DNS so upstreams set via variables re-resolve at runtime
+    # (lets nginx start even when a backend container is not up yet).
     resolver 127.0.0.11 valid=10s ipv6=off;
 
+    # HTTP basic-auth config rendered by the nginx vault-agent: either "auth_basic
+    # off;" or a realm + htpasswd file, driven by secret/pollpear/nginx.
     include /secrets/auth.conf;
 
+    # Forwarded-client headers passed to every upstream below.
     proxy_set_header Host              $host;
     proxy_set_header X-Real-IP         $remote_addr;
     proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 
+    # HTTP/1.1 + upgrade headers so proxied WebSocket connections survive.
     proxy_http_version 1.1;
     proxy_set_header Upgrade    $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
+    # Grafana behind /grafana/ (it is configured to serve from that sub-path); basic
+    # auth is off here since Grafana does its own login.
     location /grafana/ {
         auth_basic off;
         set $grafana_upstream http://grafana:3000;
         proxy_pass $grafana_upstream;
     }
+    # Redirect the bare /grafana to the trailing-slash form.
     location = /grafana {
         return 301 /grafana/;
     }
 
+    # Unauthenticated auth endpoints, rate-limited per client IP (429 past the burst)
+    # to blunt brute-force and password-spraying.
     location ~ ^/api/auth/(login|register|password-forgot|verify-email/resend)$ {
         limit_req zone=auth_limit burst=10 nodelay;
         limit_req_status 429;
@@ -86,16 +113,20 @@ server {
         proxy_pass $gateway_upstream;
     }
 
+    # API traffic to the Rust gateway (REST + WebSockets).
     location /api/ {
         set $gateway_upstream http://gateway:8080;
         proxy_pass $gateway_upstream;
     }
 
+    # Runtime frontend config: disable CRS rule 930130 (LFI) which flags the dotted
+    # filename, and serve the static file.
     location = /config.json {
         modsecurity_rules 'SecRuleRemoveById 930130';
         root /usr/share/nginx/html;
     }
 
+    # SPA fallback: serve the built frontend, routing unknown paths to index.html.
     location / {
         root /usr/share/nginx/html;
         try_files $uri $uri/ /index.html;

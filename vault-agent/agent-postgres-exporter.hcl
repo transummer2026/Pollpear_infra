@@ -1,3 +1,6 @@
+# Vault agent for the postgres-exporter-secrets side-car. From secret/pollpear/db
+# it renders the exporter's DB user, password, and connection URI (sslmode=disable,
+# in-cluster host) into the shared secrets volume. Runs once and exits.
 vault {
   address = "http://vault:8200"
 }

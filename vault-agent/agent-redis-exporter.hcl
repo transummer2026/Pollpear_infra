@@ -1,3 +1,6 @@
+# Vault agent for the redis-exporter-secrets side-car. Renders the Redis password
+# from secret/pollpear/redis as the JSON map the exporter expects
+# ({"redis://redis:6379": "<password>"}). Runs once and exits.
 vault {
   address = "http://vault:8200"
 }

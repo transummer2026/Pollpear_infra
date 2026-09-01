@@ -1,3 +1,5 @@
+# Auto-load dashboards from the mounted JSON files into the "Pollpear" folder.
+# Kept read-only from the UI so the files in git stay the source of truth.
 apiVersion: 1
 
 providers:

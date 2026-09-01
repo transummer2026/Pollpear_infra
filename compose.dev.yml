@@ -1,3 +1,6 @@
+# Dev overlay: builds the `dev` image targets, runs the hot-reload commands, and
+# publishes each service's port to the host. Layered on top of compose.yml by
+# `make up` (no nginx/TLS in dev — services are hit directly on localhost).
 services:
   gateway:
     build:
@@ -26,6 +29,8 @@ services:
     image: pollpear-frontend:dev
     ports:
       - "5173:5173"
+    # Source the Vault AppRole, generate the runtime config from Vault, then start
+    # the Vite dev server (prod instead renders config.json via frontend-secrets).
     entrypoint: ["/bin/sh", "/usr/local/bin/vault-approle-entrypoint.sh"]
     command: ["sh", "-c", "node scripts/vault-config.mjs && npm run dev"]
     volumes:
@@ -67,6 +72,8 @@ services:
   postgres:
     ports:
       - "5432:5432"
+  # Prisma Studio: dev-only DB browser on :5555, reuses the backend image and its
+  # Vault AppRole to reach Postgres.
   studio:
     build:
       context: ./../Pollpear_backend

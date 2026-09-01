@@ -1,5 +1,6 @@
 # Rhttps://prometheus.io/docs/prometheus/latest/configuration/configuration/
 
+# Default scrape/evaluation cadence and labels stamped on every series.
 global:
   scrape_interval: 15s
   scrape_timeout: 10s
@@ -8,14 +9,17 @@ global:
     cluster: pollpear
     environment: dev
 
+# Alerting rules evaluated on the schedule above.
 rule_files:
   - alert-rules.yml
 
+# Where firing alerts are sent.
 alerting:
   alertmanagers:
     - static_configs:
         - targets: ["alertmanager:9093"]
 
+# One job per target, addressed by its container name on the shared Docker networks.
 scrape_configs:
   - job_name: prometheus
     static_configs:
@@ -37,6 +41,7 @@ scrape_configs:
         labels:
           service: grafana
 
+  # Vault exposes metrics on its API path and needs the prometheus format param.
   - job_name: vault
     metrics_path: /v1/sys/metrics
     params:
@@ -81,7 +86,7 @@ scrape_configs:
         labels:
           service: backend
 
-  # TODO: a modifier quand on saura quel port il aura en prod
+  # TODO: revisit once the prod port is known.
   - job_name: frontend
     metrics_path: /metrics
     static_configs:
@@ -89,7 +94,7 @@ scrape_configs:
         labels:
           service: frontend
 
-  # TODO: a modifier quand on saura quel port il aura en prod
+  # TODO: revisit once the prod port is known.
   - job_name: gateway
     metrics_path: /metrics
     static_configs:
@@ -104,6 +109,7 @@ scrape_configs:
         labels:
           service: ai
 
+  # Garage exposes metrics on its admin port (3903), not the S3 API port.
   - job_name: garage
     metrics_path: /metrics
     static_configs:

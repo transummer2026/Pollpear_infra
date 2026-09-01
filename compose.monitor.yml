@@ -1,8 +1,14 @@
+# Monitoring stack overlay: Prometheus, Grafana, Alertmanager and the exporters.
+# Added to both dev and prod stacks; scrape/alert configs live under prometheus/,
+# alertmanager/ and grafana/.
 services:
+  # Prometheus: scrapes every target in prometheus.yml, evaluates alert-rules.yml.
   prometheus:
     image: ghcr.io/transummer2026/prometheus:latest
     container_name: pollpear-prometheus
     command:
+      # Cap TSDB retention by both age and size; --web.enable-lifecycle allows
+      # reloading the config via POST /-/reload.
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=15d
       - --storage.tsdb.retention.size=5GB
@@ -47,6 +53,8 @@ services:
     networks:
       - monitoring-network
 
+  # Grafana: dashboards and datasources auto-provisioned from ./grafana. Admin
+  # credentials come from files rendered by grafana-secrets; self-sign-up disabled.
   grafana:
     image: ghcr.io/transummer2026/grafana:latest
     container_name: pollpear-grafana
@@ -75,6 +83,7 @@ services:
     networks:
       - monitoring-network
 
+  # Alertmanager: receives firing alerts from Prometheus and routes them (Discord).
   alertmanager:
     image: ghcr.io/transummer2026/alertmanager:latest
     container_name: pollpear-alertmanager
@@ -95,7 +104,9 @@ services:
     networks:
       - monitoring-network
 
-  # Exporters
+  # Exporters (translate host/DB/cache/container metrics into Prometheus format)
+  # node-exporter: host CPU/RAM/disk/network. Needs the host PID namespace and a
+  # read-only bind of the host root to see real machine metrics from the container.
   node-exporter:
     image: ghcr.io/transummer2026/node-exporter:latest
     container_name: pollpear-node-exporter
@@ -137,6 +148,8 @@ services:
     networks:
       - monitoring-network
 
+  # postgres-exporter: Postgres stats for Prometheus; connection creds from its
+  # secrets side-car (files, never inline).
   postgres-exporter:
     image: ghcr.io/transummer2026/postgres-exporter:latest
     container_name: pollpear-postgres-exporter
@@ -151,7 +164,7 @@ services:
         condition: service_healthy
       postgres-exporter-secrets:
         condition: service_completed_successfully
-    # sonde sur / (liveness HTTP) et non /metrics : évite une salve de requêtes DB toutes les 10s
+    # Probe / (HTTP liveness), not /metrics, to avoid a burst of DB queries every 10s.
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9187/"]
       interval: 30s
@@ -164,6 +177,8 @@ services:
       - backend-network
       - monitoring-network
 
+  # cAdvisor: per-container CPU/memory/IO metrics. Needs privileged + host mounts
+  # to read cgroup and container state; --docker_only limits it to Docker containers.
   cadvisor:
     image: ghcr.io/transummer2026/cadvisor:latest
     container_name: pollpear-cadvisor
@@ -203,7 +218,7 @@ services:
     networks:
       - monitoring-network
 
-  # pas de healthcheck : image scratch (aucun shell/wget pour sonder /metrics)
+  # No healthcheck: scratch image (no shell/wget to probe /metrics).
   redis-exporter:
     image: ghcr.io/transummer2026/redis-exporter:latest
     container_name: pollpear-redis-exporter
@@ -247,5 +262,5 @@ networks:
     driver: bridge
     name: monitoring-network
 
-# TODO: acces a vault direct ou via gateway?
+# TODO: reach Vault directly or via the gateway?
 

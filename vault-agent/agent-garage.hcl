@@ -1,3 +1,7 @@
+# Vault agent for the garage-secrets side-car. Renders Garage's cluster secrets
+# (RPC secret, admin token) from secret/pollpear/garage and the S3 credentials
+# (bucket, access/secret key) from secret/pollpear/s3 into the shared secrets
+# volume. Runs once and exits.
 vault {
   address = "http://vault:8200"
 }
